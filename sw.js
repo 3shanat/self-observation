@@ -1,12 +1,12 @@
-const CACHE_NAME = "self-observation-v146";
+const CACHE_NAME = "self-observation-v147";
 
 const LOCAL_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=146",
-  "./script.js?v=146",
-  "./manifest.webmanifest?v=146",
-  "./assets/SelfObservationAppIcon1024.png?v=146",
+  "./styles.css?v=147",
+  "./script.js?v=147",
+  "./manifest.webmanifest?v=147",
+  "./assets/SelfObservationAppIcon1024.png?v=147",
   "./assets/fruits/durian.png?v=2",
   "./assets/fruits/grapefruit.png?v=2",
   "./assets/fruits/jackfruit.png?v=2",
@@ -43,8 +43,26 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy));
+          return response;
+        })
+        .catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request)
-      .then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

@@ -1,0 +1,18 @@
+{
+  "name": "Self-Observation",
+  "short_name": "Self-Observation",
+  "description": "Personal self-observation calendar, tasks, history, and foundations.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "assets/SelfObservationAppIcon1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

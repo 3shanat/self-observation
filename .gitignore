@@ -1,0 +1,14 @@
+.DS_Store
+dist/
+*.zip
+*.app/
+*.command
+*.applescript
+*.tiff
+*.icns
+assets/*.tiff
+assets/*.icns
+assets/SelfObservationLotus.iconset/
+assets/pic/
+make_lotus_app_icon.swift
+README_FOR_ELEONORA.txt

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="theme-color" content="#111827">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Self-Observation">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Self-Observation</title>
+  <link rel="manifest" href="manifest.webmanifest?v=139">
+  <link rel="apple-touch-icon" href="assets/SelfObservationAppIcon1024.png?v=139">
+  <link rel="icon" href="assets/SelfObservationAppIcon1024.png?v=139">
+  <link rel="stylesheet" href="styles.css?v=139">
+</head>
+<body>
+  <main class="page">
+    <nav class="button-row" aria-label="Site sections">
+      <button class="section-button active" data-section="observation" type="button">Self-Observation</button>
+      <button class="section-button" data-section="calendar" type="button">Calendar</button>
+      <button class="section-button" data-section="tasks" type="button">Tasks</button>
+      <button class="section-button" data-section="foundations" type="button">Foundations</button>
+      <button class="section-button backup-folder-button" id="chooseBackupFolderButton" type="button">Choose folder</button>
+      <button class="section-button import-backup-button" id="importBackupButton" type="button">Import backup</button>
+      <input id="backupFileInput" type="file" accept="application/json,.json">
+    </nav>
+
+    <section class="app-panel">
+      <section class="app-section" id="diary">
+        <form class="entry-form" id="diaryForm">
+          <textarea id="diaryInput" rows="4" placeholder="What did I understand, do, or notice today?"></textarea>
+          <button type="submit">Add entry</button>
+        </form>
+        <section class="document-organizer">
+          <div class="file-drop-zone" id="fileDropZone">
+            <input id="documentInput" type="file" multiple accept=".txt,.md,.csv,.json,.html,.htm,.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp">
+            <span>Drop files here or choose files</span>
+          </div>
+          <p class="document-status" id="documentStatus"></p>
+          <div class="document-list" id="documentList"></div>
+        </section>
+        <div class="entry-list" id="diaryList"></div>
+      </section>
+
+      <section class="app-section" id="basicFolder">
+        <div class="folder-board" id="folderBoard"></div>
+      </section>
+
+      <section class="app-section" id="tasks">
+        <form class="task-form" id="taskForm">
+          <div class="input-row">
+            <input id="taskInput" type="text" placeholder="For example: publish the site">
+            <button type="submit">Add</button>
+          </div>
+        </form>
+        <ul class="task-list" id="taskList"></ul>
+      </section>
+
+      <section class="app-section" id="foundations">
+        <div class="foundations-panel">
+          <div class="foundation-list" id="foundationList"></div>
+          <form class="foundation-form" id="foundationForm">
+            <textarea id="foundationInput" rows="2" placeholder="New foundation note..."></textarea>
+            <div class="foundation-control-actions">
+              <button type="submit">Add</button>
+              <button id="foundationEditModeButton" type="button">Edit</button>
+              <button id="foundationDeleteModeButton" type="button">Delete</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="app-section active" id="observation">
+        <div class="observation-layout">
+          <div class="observation-main">
+            <form class="observation-form" id="observationForm">
+              <div class="observation-date-row">
+                <span class="date-picker-wrap">
+                  <button id="observationDateDisplay" class="date-display-button" type="button"></button>
+                  <input id="observationDate" type="date" aria-label="Observation date">
+                  <div id="datePickerPanel" class="date-picker-panel" hidden></div>
+                </span>
+                <button id="clearObservationButton" type="button">Clear day</button>
+              </div>
+              <div class="table-wrap">
+                <div class="observation-table" role="table" aria-label="Self-Observation questions">
+                  <label class="observation-row" for="dopamineInput" role="row">
+                    <span role="cell">1. DOPAMINE level?</span>
+                    <input id="dopamineInput" type="hidden" role="cell">
+                    <span class="score-options" data-score-for="dopamine"></span>
+                  </label>
+                  <label class="observation-row" for="energyInput" role="row">
+                    <span role="cell">2. Energy Level?</span>
+                    <input id="energyInput" type="hidden" role="cell">
+                    <span class="score-options" data-score-for="energy"></span>
+                  </label>
+                  <label class="observation-row" for="thinkingInput" role="row">
+                    <span role="cell">3. Reasoning speed?</span>
+                    <input id="thinkingInput" type="hidden" role="cell">
+                    <span class="score-options" data-score-for="thinking"></span>
+                  </label>
+                  <label class="observation-row" for="attentionInput" role="row">
+                    <span role="cell">4. Concentration?</span>
+                    <input id="attentionInput" type="hidden" role="cell">
+                    <span class="score-options" data-score-for="attention"></span>
+                  </label>
+                  <label class="observation-row" for="sustainedAttentionInput" role="row">
+                    <span role="cell">5. Sustained attention?</span>
+                    <input id="sustainedAttentionInput" type="hidden" role="cell">
+                    <span class="score-options" data-score-for="sustainedAttention"></span>
+                  </label>
+                  <label class="observation-row" for="microbiotaInput" role="row">
+                    <span role="cell">6. Microbiota control?</span>
+                    <input id="microbiotaInput" type="hidden" role="cell">
+                    <span class="score-options" data-score-for="microbiota"></span>
+                  </label>
+                  <label class="observation-row" for="motivationInput" role="row">
+                    <span role="cell">7. Motivation?</span>
+                    <input id="motivationInput" type="hidden" role="cell">
+                    <span class="score-options" data-score-for="motivation"></span>
+                  </label>
+                  <label class="observation-row" for="humourInput" role="row">
+                    <span role="cell">8. Humour level?</span>
+                    <input id="humourInput" type="hidden" role="cell">
+                    <span class="score-options" data-score-for="humour"></span>
+                  </label>
+                  <label class="observation-row" for="heavinessInput" role="row">
+                    <span role="cell">9. Body heaviness?</span>
+                    <input id="heavinessInput" type="hidden" role="cell">
+                    <span class="score-options" data-score-for="heaviness"></span>
+                  </label>
+                  <label class="observation-row" for="matInput" role="row">
+                    <span role="cell">10. Mad?</span>
+                    <input id="matInput" type="hidden" role="cell">
+                    <span class="score-options" data-score-for="mat"></span>
+                  </label>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <div class="daily-food-panel">
+            <fieldset class="food-slot-selector" aria-label="Add food to">
+              <label><input type="radio" name="foodSlot" value="morning" checked> Morning</label>
+              <label><input type="radio" name="foodSlot" value="day"> Day</label>
+              <label><input type="radio" name="foodSlot" value="evening"> Evening</label>
+              <label class="snow-option"><input id="snowInput" type="checkbox"> 🥶</label>
+            </fieldset>
+            <fieldset class="fruit-fieldset" aria-label="Fruits today">
+              <div class="food-columns">
+                <div class="fruit-group">
+                  <label><input type="checkbox" name="fruit" value="apple"> 🍎 Apple</label>
+                  <label><input type="checkbox" name="fruit" value="grapefruit"> <span class="fruit-sprite grapefruit-icon"></span> Grapefruit</label>
+                  <label><input type="checkbox" name="fruit" value="banana"> 🍌 Banana</label>
+                  <label><input type="checkbox" name="fruit" value="orange"> 🍊 Orange</label>
+                  <label><input type="checkbox" name="fruit" value="watermelon"> 🍉 Watermel...</label>
+                  <label><input type="checkbox" name="fruit" value="melon"> 🍈 Melon</label>
+                  <label><input type="checkbox" name="fruit" value="avocado"> 🥑 Avocado</label>
+                  <label><input type="checkbox" name="fruit" value="cherry"> 🍒 Cherry</label>
+                  <label><input type="checkbox" name="fruit" value="blueberry"> 🫐 Blueberry</label>
+                </div>
+                <div class="fruit-group">
+                  <label><input type="checkbox" name="fruit" value="papaya"> <span class="fruit-sprite papaya-icon"></span> Papaya</label>
+                  <label><input type="checkbox" name="fruit" value="jackfruit"> <span class="fruit-sprite jackfruit-icon"></span> Jackfruit</label>
+                  <label><input type="checkbox" name="fruit" value="rambutan"> <span class="fruit-sprite rambutan-icon"></span> Rambutan</label>
+                  <label><input type="checkbox" name="fruit" value="muran"> <span class="fruit-sprite muran-icon"></span> Muran</label>
+                  <label><input type="checkbox" name="fruit" value="pineapple"> 🍍 Pineapple</label>
+                  <label><input type="checkbox" name="fruit" value="mangosteen"> <span class="fruit-sprite mangosteen-icon"></span> Mangost...</label>
+                  <label><input type="checkbox" name="fruit" value="durian"> <span class="fruit-sprite durian-icon"></span> Durian</label>
+                  <label><input type="checkbox" name="fruit" value="grapes"> 🍇 Grapes</label>
+                  <label><input type="checkbox" name="fruit" value="carrot"> 🥕 Carrot</label>
+                </div>
+                <div class="drink-options">
+                  <label class="special-food-option"><input type="checkbox" name="fruit" value="juice"><span class="fruit-sprite juice-icon"></span>Juice</label>
+                  <label class="special-food-option"><input type="checkbox" name="fruit" value="water"><span class="fruit-sprite water-icon"></span>Water</label>
+                  <label class="fasting-option">
+                    <input id="fastingInput" type="checkbox">
+                    <span class="fasting-stars" aria-hidden="true"><span class="star star-large"></span><span class="star star-small"></span></span>
+                    Fast
+                  </label>
+                  <label><input type="checkbox" name="fruit" value="dead-food"> ☠️ D.Foot</label>
+                  <label><input type="checkbox" name="fruit" value="turation"> 💦 Turation</label>
+                </div>
+              </div>
+              <div class="daily-extra-options">
+                <div class="activity-options">
+                  <div class="activity-column">
+                    <label><input type="checkbox" name="fruit" value="meditation"> 🧘 Meditation</label>
+                    <label><input type="checkbox" name="fruit" value="jogging"> 🏃 Jogging</label>
+                    <label><input type="checkbox" name="fruit" value="workout"> 🏋️ Workout</label>
+                  </div>
+                  <div class="activity-column">
+                    <label><input type="checkbox" name="fruit" value="laptop"> 💻 Laptop</label>
+                    <label><input type="checkbox" name="fruit" value="book"> 📚 Book</label>
+                    <label><input type="checkbox" name="fruit" value="art"> 🎵 Art</label>
+                  </div>
+                  <div class="activity-column">
+                    <label><input type="checkbox" name="fruit" value="job"> 🧑‍🔧 Job</label>
+                    <label><input type="checkbox" name="fruit" value="flight"> ✈️ Flight</label>
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+          </div>
+          <div class="observation-side-panel">
+            <div class="observation-side-actions">
+              <button class="save-observation-button" type="submit" form="observationForm">Save</button>
+              <button id="goToCalendarButton" type="button">Calendar</button>
+            </div>
+            <section class="observation-history-panel" aria-label="Self-Observation history">
+              <h3>History</h3>
+              <div class="history-list" id="observationHistory"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="app-section" id="calendar">
+        <div class="calendar-toolbar">
+          <button id="previousMonthButton" type="button">Previous</button>
+          <h3 id="calendarMonth"></h3>
+          <button id="nextMonthButton" type="button">Next</button>
+        </div>
+        <div class="calendar-weekdays" aria-hidden="true">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </section>
+
+      <section class="app-section" id="complaints">
+        <form class="entry-form" id="complaintsForm">
+          <textarea id="complaintsInput" rows="4" placeholder="What is blocking, irritating, or weighing on me?"></textarea>
+          <button type="submit">Drop it here</button>
+        </form>
+        <div class="entry-list" id="complaintsList"></div>
+      </section>
+    </section>
+  </main>
+  <div class="app-modal-backdrop" id="confirmModal" hidden>
+    <section class="app-modal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+      <h3 id="confirmModalTitle">Confirm action</h3>
+      <p id="confirmModalMessage"></p>
+      <div class="app-modal-actions">
+        <button class="app-modal-cancel" id="confirmModalCancel" type="button">Cancel</button>
+        <button class="app-modal-confirm" id="confirmModalConfirm" type="button">Delete</button>
+      </div>
+    </section>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="script.js?v=139"></script>
+  <script>
+    if ("serviceWorker" in navigator && location.protocol !== "file:") {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js?v=139").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

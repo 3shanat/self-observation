@@ -2329,7 +2329,7 @@ li {
     align-content: start;
     gap: 10px;
     height: auto;
-    max-height: min(560px, calc(100vh - 148px));
+    max-height: min(300px, calc(100vh - 220px));
     padding: 10px;
     overflow-y: auto;
     overflow-x: hidden;

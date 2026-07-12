@@ -543,20 +543,27 @@ select:focus {
 }
 
 .foundation-list {
-  column-width: 230px;
-  column-gap: 12px;
+  position: relative;
   min-height: 420px;
-  max-height: min(58vh, 560px);
+  height: min(58vh, 560px);
   padding: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: auto;
   border-radius: 8px;
   scrollbar-color: rgba(100, 116, 139, 0.32) transparent;
   scrollbar-width: thin;
 }
 
+.foundation-list::after {
+  content: "";
+  display: block;
+  width: var(--foundation-scroll-width, 100%);
+  height: var(--foundation-scroll-height, 420px);
+  pointer-events: none;
+}
+
 .foundation-list::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 
 .foundation-list::-webkit-scrollbar-track {
@@ -569,13 +576,13 @@ select:focus {
 }
 
 .foundation-card {
-  display: inline-grid;
+  position: absolute;
+  display: grid;
   gap: 7px;
-  break-inside: avoid;
-  width: 100%;
+  width: max-content;
   min-width: 170px;
   max-width: 280px;
-  margin: 0 0 12px;
+  margin: 0;
   padding: 10px;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid #dbe3ef;
@@ -597,11 +604,6 @@ select:focus {
   cursor: grabbing;
   opacity: 0.86;
   box-shadow: 0 16px 32px rgba(15, 23, 42, 0.16);
-}
-
-.foundation-card.drop-target {
-  outline: 2px solid #60a5fa;
-  outline-offset: 2px;
 }
 
 .foundation-card p {
@@ -2671,9 +2673,6 @@ li {
     border-radius: 14px;
   }
 
-  .foundation-list {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 360px) {

@@ -265,6 +265,9 @@ const foundationPalette = [
   { name: "violet", background: "#f5f3ff", border: "#c4b5fd" },
   { name: "gray", background: "#f8fafc", border: "#cbd5e1" }
 ];
+const foundationSlotWidth = 300;
+const foundationSlotHeight = 96;
+const foundationCardGap = 14;
 const backupDatabaseName = "selfObservationBackup";
 const backupDatabaseStore = "handles";
 const backupDirectoryKey = "directory";
@@ -1234,14 +1237,16 @@ function normalizeFoundation(foundation) {
     ? foundation
     : { text: String(foundation || "") };
   const color = getFoundationPaletteItem(safeFoundation.color).name;
+  const x = Number.isFinite(Number(safeFoundation.x)) ? Number(safeFoundation.x) : null;
+  const y = Number.isFinite(Number(safeFoundation.y)) ? Number(safeFoundation.y) : null;
   const normalizedFoundation = {
     ...safeFoundation,
     text: String(safeFoundation.text || ""),
-    color
+    color,
+    x,
+    y
   };
 
-  delete normalizedFoundation.x;
-  delete normalizedFoundation.y;
   delete normalizedFoundation.manual;
 
   return normalizedFoundation;
@@ -1249,122 +1254,157 @@ function normalizeFoundation(foundation) {
 
 function applyFoundationCardStyle(card, foundation) {
   const color = getFoundationPaletteItem(foundation.color);
+  card.style.left = `${Math.max(0, Number(foundation.x) || 0)}px`;
+  card.style.top = `${Math.max(0, Number(foundation.y) || 0)}px`;
   card.style.background = color.background;
   card.style.borderColor = color.border;
+}
+
+function getFoundationRect(card, x, y) {
+  return {
+    x,
+    y,
+    width: card.offsetWidth || 180,
+    height: card.offsetHeight || 44
+  };
+}
+
+function doFoundationRectsOverlap(first, second) {
+  return !(
+    first.x + first.width + foundationCardGap <= second.x
+    || second.x + second.width + foundationCardGap <= first.x
+    || first.y + first.height + foundationCardGap <= second.y
+    || second.y + second.height + foundationCardGap <= first.y
+  );
+}
+
+function findFoundationOpenPosition(card, occupiedRects) {
+  const boardWidth = foundationList.clientWidth || 1000;
+  const columns = Math.max(1, Math.floor(boardWidth / foundationSlotWidth));
+  const maxRows = Math.max(20, savedData.foundations.length + 8);
+
+  for (let row = 0; row < maxRows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const candidate = getFoundationRect(card, column * foundationSlotWidth, row * foundationSlotHeight);
+      const overlaps = occupiedRects.some((rect) => doFoundationRectsOverlap(candidate, rect));
+
+      if (!overlaps) {
+        return {
+          x: candidate.x,
+          y: candidate.y
+        };
+      }
+    }
+  }
+
+  return {
+    x: 0,
+    y: maxRows * foundationSlotHeight
+  };
+}
+
+function updateFoundationScrollSize() {
+  const cards = Array.from(foundationList.querySelectorAll(".foundation-card"));
+  const width = cards.reduce((max, card) => {
+    const x = Number.parseFloat(card.style.left) || 0;
+    return Math.max(max, x + card.offsetWidth + foundationCardGap);
+  }, foundationList.clientWidth || 0);
+  const height = cards.reduce((max, card) => {
+    const y = Number.parseFloat(card.style.top) || 0;
+    return Math.max(max, y + card.offsetHeight + foundationCardGap);
+  }, foundationList.clientHeight || 0);
+
+  foundationList.style.setProperty("--foundation-scroll-width", `${Math.ceil(width)}px`);
+  foundationList.style.setProperty("--foundation-scroll-height", `${Math.ceil(height)}px`);
 }
 
 function startFoundationDrag(event, card, index) {
   if (event.target.closest("textarea, button, input")) {
     return;
   }
+  if (event.button != null && event.button !== 0) {
+    return;
+  }
+  if (activeFoundationDrag) {
+    return;
+  }
+
+  const startLeft = Number.parseFloat(card.style.left) || 0;
+  const startTop = Number.parseFloat(card.style.top) || 0;
+  const pointerId = event.pointerId ?? "mouse";
 
   activeFoundationDrag = {
     index,
     card,
-    pointerId: event.pointerId,
+    pointerId,
+    usesMouseFallback: event.type === "mousedown",
+    usesPointerDocument: event.pointerId != null,
     startX: event.clientX,
     startY: event.clientY,
-    targetIndex: -1,
+    startLeft,
+    startTop,
     didMove: false
   };
 
   card.classList.add("dragging");
-  card.setPointerCapture(event.pointerId);
+  if (event.pointerId != null && typeof card.setPointerCapture === "function") {
+    card.setPointerCapture(event.pointerId);
+  }
+  if (activeFoundationDrag.usesPointerDocument) {
+    document.addEventListener("pointermove", moveFoundationDrag);
+    document.addEventListener("pointerup", stopFoundationDrag);
+    document.addEventListener("pointercancel", stopFoundationDrag);
+  }
+  if (activeFoundationDrag.usesMouseFallback) {
+    document.addEventListener("mousemove", moveFoundationDrag);
+    document.addEventListener("mouseup", stopFoundationDrag);
+  }
   event.preventDefault();
 }
 
 function moveFoundationDrag(event) {
-  if (!activeFoundationDrag || event.pointerId !== activeFoundationDrag.pointerId) {
+  const pointerId = event.pointerId ?? "mouse";
+
+  if (!activeFoundationDrag || pointerId !== activeFoundationDrag.pointerId) {
     return;
   }
 
   const deltaX = event.clientX - activeFoundationDrag.startX;
   const deltaY = event.clientY - activeFoundationDrag.startY;
-  activeFoundationDrag.card.style.transform = `translate(${Math.round(deltaX)}px, ${Math.round(deltaY)}px)`;
+  const nextX = Math.max(0, activeFoundationDrag.startLeft + deltaX);
+  const nextY = Math.max(0, activeFoundationDrag.startTop + deltaY);
+
+  activeFoundationDrag.card.style.left = `${Math.round(nextX)}px`;
+  activeFoundationDrag.card.style.top = `${Math.round(nextY)}px`;
   activeFoundationDrag.didMove = Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4;
-
-  const target = getFoundationDropTarget(event.clientX, event.clientY, activeFoundationDrag.card)
-    || getClosestFoundationDropTarget(event.clientX, event.clientY, activeFoundationDrag.card);
-  foundationList.querySelectorAll(".foundation-card.drop-target").forEach((item) => {
-    if (item !== target) {
-      item.classList.remove("drop-target");
-    }
-  });
-
-  if (target) {
-    activeFoundationDrag.targetIndex = Number(target.dataset.index);
-    target.classList.add("drop-target");
-  }
-}
-
-function getFoundationDropTarget(clientX, clientY, draggedCard) {
-  draggedCard.style.pointerEvents = "none";
-  const target = document.elementFromPoint(clientX, clientY)?.closest(".foundation-card");
-  draggedCard.style.pointerEvents = "";
-
-  if (!target || target === draggedCard || !foundationList.contains(target)) {
-    return null;
-  }
-
-  return target;
-}
-
-function getClosestFoundationDropTarget(clientX, clientY, draggedCard) {
-  const boardRect = foundationList.getBoundingClientRect();
-
-  if (
-    clientX < boardRect.left
-    || clientX > boardRect.right
-    || clientY < boardRect.top
-    || clientY > boardRect.bottom
-  ) {
-    return null;
-  }
-
-  return Array.from(foundationList.querySelectorAll(".foundation-card"))
-    .filter((card) => card !== draggedCard)
-    .map((card) => {
-      const rect = card.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const distance = Math.hypot(clientX - centerX, clientY - centerY);
-      return { card, distance };
-    })
-    .sort((a, b) => a.distance - b.distance)[0]?.card || null;
-}
-
-function moveFoundationItem(fromIndex, toIndex) {
-  if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) {
-    return;
-  }
-
-  const [item] = savedData.foundations.splice(fromIndex, 1);
-  savedData.foundations.splice(toIndex, 0, item);
+  updateFoundationScrollSize();
 }
 
 function stopFoundationDrag(event) {
-  if (!activeFoundationDrag || event.pointerId !== activeFoundationDrag.pointerId) {
+  const pointerId = event.pointerId ?? "mouse";
+
+  if (!activeFoundationDrag || pointerId !== activeFoundationDrag.pointerId) {
     return;
   }
 
-  const { card, index } = activeFoundationDrag;
-  const target = getFoundationDropTarget(event.clientX, event.clientY, card)
-    || getClosestFoundationDropTarget(event.clientX, event.clientY, card);
-  const targetIndex = target ? Number(target.dataset.index) : -1;
-  const savedTargetIndex = activeFoundationDrag.targetIndex;
+  const { card, index, usesMouseFallback, usesPointerDocument } = activeFoundationDrag;
 
   card.classList.remove("dragging");
-  card.style.transform = "";
-  foundationList.querySelectorAll(".foundation-card.drop-target").forEach((item) => item.classList.remove("drop-target"));
+  if (usesPointerDocument) {
+    document.removeEventListener("pointermove", moveFoundationDrag);
+    document.removeEventListener("pointerup", stopFoundationDrag);
+    document.removeEventListener("pointercancel", stopFoundationDrag);
+  }
+  if (usesMouseFallback) {
+    document.removeEventListener("mousemove", moveFoundationDrag);
+    document.removeEventListener("mouseup", stopFoundationDrag);
+  }
 
-  const nextIndex = targetIndex >= 0 ? targetIndex : savedTargetIndex;
-
-  if (activeFoundationDrag.didMove && nextIndex >= 0 && nextIndex !== index) {
-    const movedItem = savedData.foundations[index];
-    moveFoundationItem(index, nextIndex);
-    movedItem.updated = new Date().toLocaleString();
+  if (activeFoundationDrag.didMove) {
+    savedData.foundations[index].x = Math.round(Number.parseFloat(card.style.left) || 0);
+    savedData.foundations[index].y = Math.round(Number.parseFloat(card.style.top) || 0);
+    savedData.foundations[index].updated = new Date().toLocaleString();
     saveData();
-    renderFoundations();
   }
 
   activeFoundationDrag = null;
@@ -1376,16 +1416,19 @@ function renderFoundations() {
   foundationDeleteModeButton.classList.toggle("active", foundationMode === "delete");
 
   let didNormalize = false;
+  const occupiedRects = [];
 
   savedData.foundations.forEach((foundation, index) => {
     const foundationObject = foundation && typeof foundation === "object" ? foundation : {};
     const normalizedFoundation = normalizeFoundation(foundation);
     savedData.foundations[index] = normalizedFoundation;
+    const originalX = Number.isFinite(Number(foundationObject.x)) ? Number(foundationObject.x) : null;
+    const originalY = Number.isFinite(Number(foundationObject.y)) ? Number(foundationObject.y) : null;
     didNormalize = didNormalize
       || normalizedFoundation.text !== foundation?.text
       || normalizedFoundation.color !== foundation?.color
-      || "x" in foundationObject
-      || "y" in foundationObject
+      || normalizedFoundation.x !== originalX
+      || normalizedFoundation.y !== originalY
       || "manual" in foundationObject;
 
     const card = document.createElement("article");
@@ -1401,6 +1444,7 @@ function renderFoundations() {
     card.addEventListener("pointermove", moveFoundationDrag);
     card.addEventListener("pointerup", stopFoundationDrag);
     card.addEventListener("pointercancel", stopFoundationDrag);
+    card.addEventListener("mousedown", (event) => startFoundationDrag(event, card, index));
 
     if (foundationMode === "edit") {
       const editor = document.createElement("textarea");
@@ -1475,7 +1519,19 @@ function renderFoundations() {
     }
 
     foundationList.append(card);
+
+    if (normalizedFoundation.x === null || normalizedFoundation.y === null) {
+      const position = findFoundationOpenPosition(card, occupiedRects);
+      normalizedFoundation.x = position.x;
+      normalizedFoundation.y = position.y;
+      didNormalize = true;
+      applyFoundationCardStyle(card, normalizedFoundation);
+    }
+
+    occupiedRects.push(getFoundationRect(card, normalizedFoundation.x, normalizedFoundation.y));
   });
+
+  updateFoundationScrollSize();
 
   if (didNormalize) {
     saveData();

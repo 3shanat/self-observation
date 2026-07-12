@@ -543,24 +543,39 @@ select:focus {
 }
 
 .foundation-list {
-  position: relative;
-  min-height: 520px;
+  column-width: 230px;
+  column-gap: 12px;
+  min-height: 420px;
+  max-height: min(58vh, 560px);
+  padding: 0;
   overflow-y: auto;
-  overflow-x: auto;
-  background:
-    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
-  background-size: 36px 36px;
+  overflow-x: hidden;
   border-radius: 8px;
+  scrollbar-color: rgba(100, 116, 139, 0.32) transparent;
+  scrollbar-width: thin;
+}
+
+.foundation-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.foundation-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.foundation-list::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.28);
+  border-radius: 999px;
 }
 
 .foundation-card {
-  display: grid;
+  display: inline-grid;
   gap: 7px;
-  position: absolute;
+  break-inside: avoid;
+  width: 100%;
   min-width: 170px;
   max-width: 280px;
-  width: max-content;
+  margin: 0 0 12px;
   padding: 10px;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid #dbe3ef;
@@ -569,8 +584,10 @@ select:focus {
   cursor: default;
   user-select: none;
   touch-action: none;
+  transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
 }
 
+.foundation-card,
 .foundation-card.is-editing {
   cursor: grab;
 }
@@ -578,7 +595,13 @@ select:focus {
 .foundation-card.dragging {
   z-index: 20;
   cursor: grabbing;
+  opacity: 0.86;
   box-shadow: 0 16px 32px rgba(15, 23, 42, 0.16);
+}
+
+.foundation-card.drop-target {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
 }
 
 .foundation-card p {
@@ -591,6 +614,7 @@ select:focus {
 }
 
 .foundation-card textarea {
+  cursor: text;
   user-select: text;
   touch-action: auto;
 }

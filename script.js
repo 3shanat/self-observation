@@ -265,9 +265,6 @@ const foundationPalette = [
   { name: "violet", background: "#f5f3ff", border: "#c4b5fd" },
   { name: "gray", background: "#f8fafc", border: "#cbd5e1" }
 ];
-const foundationColumnWidth = 300;
-const foundationRowGap = 14;
-
 const backupDatabaseName = "selfObservationBackup";
 const backupDatabaseStore = "handles";
 const backupDirectoryKey = "directory";
@@ -1232,109 +1229,41 @@ function getFoundationPaletteItem(colorName) {
   return foundationPalette.find((item) => item.name === colorName) || foundationPalette[0];
 }
 
-function getDefaultFoundationPosition(index) {
-  const rowHeight = 132;
-  const columns = Math.max(1, Math.floor((foundationList.clientWidth || 1000) / foundationColumnWidth));
-
-  return {
-    x: 0 + (index % columns) * foundationColumnWidth,
-    y: 0 + Math.floor(index / columns) * rowHeight
-  };
-}
-
-function hasFoundationPosition(foundation) {
-  return Number.isFinite(Number(foundation?.x)) && Number.isFinite(Number(foundation?.y));
-}
-
-function normalizeFoundation(foundation, index) {
+function normalizeFoundation(foundation) {
   const safeFoundation = foundation && typeof foundation === "object"
     ? foundation
     : { text: String(foundation || "") };
-  const defaultPosition = getDefaultFoundationPosition(index);
-  const x = Number.isFinite(Number(safeFoundation.x)) ? Number(safeFoundation.x) : defaultPosition.x;
-  const y = Number.isFinite(Number(safeFoundation.y)) ? Number(safeFoundation.y) : defaultPosition.y;
   const color = getFoundationPaletteItem(safeFoundation.color).name;
-
-  return {
+  const normalizedFoundation = {
     ...safeFoundation,
     text: String(safeFoundation.text || ""),
-    x,
-    y,
-    color,
-    manual: safeFoundation.manual === true
+    color
   };
-}
 
-function getFoundationAutoLayoutColumns() {
-  const boardWidth = foundationList.clientWidth || 1000;
-  const columns = Math.max(1, Math.floor(boardWidth / foundationColumnWidth));
+  delete normalizedFoundation.x;
+  delete normalizedFoundation.y;
+  delete normalizedFoundation.manual;
 
-  return Array.from({ length: columns }, (_, index) => ({
-    x: index * foundationColumnWidth,
-    y: 0
-  }));
-}
-
-function placeFoundationInNextGap(card, foundation, columns) {
-  const targetColumn = columns.reduce((best, column) => (column.y < best.y ? column : best), columns[0]);
-  foundation.x = targetColumn.x;
-  foundation.y = targetColumn.y;
-  applyFoundationCardStyle(card, foundation);
-  targetColumn.y += card.offsetHeight + foundationRowGap;
-}
-
-function reserveFoundationSpace(card, foundation, columns) {
-  const targetColumn = columns.reduce((best, column) => {
-    const distance = Math.abs(column.x - foundation.x);
-    const bestDistance = Math.abs(best.x - foundation.x);
-    return distance < bestDistance ? column : best;
-  }, columns[0]);
-  targetColumn.y = Math.max(targetColumn.y, foundation.y + card.offsetHeight + foundationRowGap);
+  return normalizedFoundation;
 }
 
 function applyFoundationCardStyle(card, foundation) {
   const color = getFoundationPaletteItem(foundation.color);
-  card.style.left = `${Math.max(0, Number(foundation.x) || 0)}px`;
-  card.style.top = `${Math.max(0, Number(foundation.y) || 0)}px`;
   card.style.background = color.background;
   card.style.borderColor = color.border;
 }
 
-function updateFoundationBoardSize() {
-  const cards = Array.from(foundationList.querySelectorAll(".foundation-card"));
-  const bottom = cards.reduce((max, card) => {
-    const top = Number.parseFloat(card.style.top) || 0;
-    return Math.max(max, top + card.offsetHeight + 36);
-  }, 520);
-  const right = cards.reduce((max, card) => {
-    const left = Number.parseFloat(card.style.left) || 0;
-    return Math.max(max, left + card.offsetWidth + 36);
-  }, foundationList.clientWidth || 0);
-
-  foundationList.style.minHeight = `${Math.ceil(bottom)}px`;
-  foundationList.style.minWidth = `${Math.max(right, foundationList.clientWidth || 0)}px`;
-}
-
 function startFoundationDrag(event, card, index) {
-  if (foundationMode !== "edit") {
-    return;
-  }
-
   if (event.target.closest("textarea, button, input")) {
     return;
   }
-
-  const boardRect = foundationList.getBoundingClientRect();
-  const cardRect = card.getBoundingClientRect();
 
   activeFoundationDrag = {
     index,
     card,
     pointerId: event.pointerId,
-    offsetX: event.clientX - cardRect.left,
-    offsetY: event.clientY - cardRect.top,
-    boardLeft: boardRect.left,
-    boardTop: boardRect.top
+    startX: event.clientX,
+    startY: event.clientY
   };
 
   card.classList.add("dragging");
@@ -1347,12 +1276,41 @@ function moveFoundationDrag(event) {
     return;
   }
 
-  const x = Math.max(0, event.clientX - activeFoundationDrag.boardLeft + foundationList.scrollLeft - activeFoundationDrag.offsetX);
-  const y = Math.max(0, event.clientY - activeFoundationDrag.boardTop + foundationList.scrollTop - activeFoundationDrag.offsetY);
+  const deltaX = event.clientX - activeFoundationDrag.startX;
+  const deltaY = event.clientY - activeFoundationDrag.startY;
+  activeFoundationDrag.card.style.transform = `translate(${Math.round(deltaX)}px, ${Math.round(deltaY)}px)`;
 
-  activeFoundationDrag.card.style.left = `${Math.round(x)}px`;
-  activeFoundationDrag.card.style.top = `${Math.round(y)}px`;
-  updateFoundationBoardSize();
+  const target = getFoundationDropTarget(event.clientX, event.clientY, activeFoundationDrag.card);
+  foundationList.querySelectorAll(".foundation-card.drop-target").forEach((item) => {
+    if (item !== target) {
+      item.classList.remove("drop-target");
+    }
+  });
+
+  if (target) {
+    target.classList.add("drop-target");
+  }
+}
+
+function getFoundationDropTarget(clientX, clientY, draggedCard) {
+  draggedCard.style.pointerEvents = "none";
+  const target = document.elementFromPoint(clientX, clientY)?.closest(".foundation-card");
+  draggedCard.style.pointerEvents = "";
+
+  if (!target || target === draggedCard || !foundationList.contains(target)) {
+    return null;
+  }
+
+  return target;
+}
+
+function moveFoundationItem(fromIndex, toIndex) {
+  if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) {
+    return;
+  }
+
+  const [item] = savedData.foundations.splice(fromIndex, 1);
+  savedData.foundations.splice(toIndex, 0, item);
 }
 
 function stopFoundationDrag(event) {
@@ -1361,14 +1319,21 @@ function stopFoundationDrag(event) {
   }
 
   const { card, index } = activeFoundationDrag;
+  const target = getFoundationDropTarget(event.clientX, event.clientY, card);
+  const targetIndex = target ? Number(target.dataset.index) : -1;
 
   card.classList.remove("dragging");
-  savedData.foundations[index].x = Math.round(Number.parseFloat(card.style.left) || 0);
-  savedData.foundations[index].y = Math.round(Number.parseFloat(card.style.top) || 0);
-  savedData.foundations[index].manual = true;
-  savedData.foundations[index].updated = new Date().toLocaleString();
+  card.style.transform = "";
+  foundationList.querySelectorAll(".foundation-card.drop-target").forEach((item) => item.classList.remove("drop-target"));
+
+  if (targetIndex >= 0 && targetIndex !== index) {
+    moveFoundationItem(index, targetIndex);
+    savedData.foundations[targetIndex].updated = new Date().toLocaleString();
+    saveData();
+    renderFoundations();
+  }
+
   activeFoundationDrag = null;
-  saveData();
 }
 
 function renderFoundations() {
@@ -1377,19 +1342,17 @@ function renderFoundations() {
   foundationDeleteModeButton.classList.toggle("active", foundationMode === "delete");
 
   let didNormalize = false;
-  const autoLayoutColumns = getFoundationAutoLayoutColumns();
-  const manualCards = [];
-  const autoCards = [];
 
   savedData.foundations.forEach((foundation, index) => {
-    const hadPosition = hasFoundationPosition(foundation);
-    const normalizedFoundation = normalizeFoundation(foundation, index);
+    const foundationObject = foundation && typeof foundation === "object" ? foundation : {};
+    const normalizedFoundation = normalizeFoundation(foundation);
     savedData.foundations[index] = normalizedFoundation;
     didNormalize = didNormalize
       || normalizedFoundation.text !== foundation?.text
       || normalizedFoundation.color !== foundation?.color
-      || normalizedFoundation.manual !== foundation?.manual
-      || !hadPosition;
+      || "x" in foundationObject
+      || "y" in foundationObject
+      || "manual" in foundationObject;
 
     const card = document.createElement("article");
     const content = document.createElement("p");
@@ -1478,24 +1441,7 @@ function renderFoundations() {
     }
 
     foundationList.append(card);
-
-    if (normalizedFoundation.manual) {
-      applyFoundationCardStyle(card, normalizedFoundation);
-      manualCards.push({ card, foundation: normalizedFoundation });
-    } else {
-      autoCards.push({ card, foundation: normalizedFoundation });
-    }
   });
-
-  manualCards.forEach(({ card, foundation }) => {
-    reserveFoundationSpace(card, foundation, autoLayoutColumns);
-  });
-
-  autoCards.forEach(({ card, foundation }) => {
-    placeFoundationInNextGap(card, foundation, autoLayoutColumns);
-  });
-
-  updateFoundationBoardSize();
 
   if (didNormalize) {
     saveData();

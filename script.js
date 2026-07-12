@@ -1263,7 +1263,9 @@ function startFoundationDrag(event, card, index) {
     card,
     pointerId: event.pointerId,
     startX: event.clientX,
-    startY: event.clientY
+    startY: event.clientY,
+    targetIndex: -1,
+    didMove: false
   };
 
   card.classList.add("dragging");
@@ -1279,8 +1281,10 @@ function moveFoundationDrag(event) {
   const deltaX = event.clientX - activeFoundationDrag.startX;
   const deltaY = event.clientY - activeFoundationDrag.startY;
   activeFoundationDrag.card.style.transform = `translate(${Math.round(deltaX)}px, ${Math.round(deltaY)}px)`;
+  activeFoundationDrag.didMove = Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4;
 
-  const target = getFoundationDropTarget(event.clientX, event.clientY, activeFoundationDrag.card);
+  const target = getFoundationDropTarget(event.clientX, event.clientY, activeFoundationDrag.card)
+    || getClosestFoundationDropTarget(event.clientX, event.clientY, activeFoundationDrag.card);
   foundationList.querySelectorAll(".foundation-card.drop-target").forEach((item) => {
     if (item !== target) {
       item.classList.remove("drop-target");
@@ -1288,6 +1292,7 @@ function moveFoundationDrag(event) {
   });
 
   if (target) {
+    activeFoundationDrag.targetIndex = Number(target.dataset.index);
     target.classList.add("drop-target");
   }
 }
@@ -1302,6 +1307,30 @@ function getFoundationDropTarget(clientX, clientY, draggedCard) {
   }
 
   return target;
+}
+
+function getClosestFoundationDropTarget(clientX, clientY, draggedCard) {
+  const boardRect = foundationList.getBoundingClientRect();
+
+  if (
+    clientX < boardRect.left
+    || clientX > boardRect.right
+    || clientY < boardRect.top
+    || clientY > boardRect.bottom
+  ) {
+    return null;
+  }
+
+  return Array.from(foundationList.querySelectorAll(".foundation-card"))
+    .filter((card) => card !== draggedCard)
+    .map((card) => {
+      const rect = card.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const distance = Math.hypot(clientX - centerX, clientY - centerY);
+      return { card, distance };
+    })
+    .sort((a, b) => a.distance - b.distance)[0]?.card || null;
 }
 
 function moveFoundationItem(fromIndex, toIndex) {
@@ -1319,16 +1348,21 @@ function stopFoundationDrag(event) {
   }
 
   const { card, index } = activeFoundationDrag;
-  const target = getFoundationDropTarget(event.clientX, event.clientY, card);
+  const target = getFoundationDropTarget(event.clientX, event.clientY, card)
+    || getClosestFoundationDropTarget(event.clientX, event.clientY, card);
   const targetIndex = target ? Number(target.dataset.index) : -1;
+  const savedTargetIndex = activeFoundationDrag.targetIndex;
 
   card.classList.remove("dragging");
   card.style.transform = "";
   foundationList.querySelectorAll(".foundation-card.drop-target").forEach((item) => item.classList.remove("drop-target"));
 
-  if (targetIndex >= 0 && targetIndex !== index) {
-    moveFoundationItem(index, targetIndex);
-    savedData.foundations[targetIndex].updated = new Date().toLocaleString();
+  const nextIndex = targetIndex >= 0 ? targetIndex : savedTargetIndex;
+
+  if (activeFoundationDrag.didMove && nextIndex >= 0 && nextIndex !== index) {
+    const movedItem = savedData.foundations[index];
+    moveFoundationItem(index, nextIndex);
+    movedItem.updated = new Date().toLocaleString();
     saveData();
     renderFoundations();
   }

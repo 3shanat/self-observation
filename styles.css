@@ -543,28 +543,42 @@ select:focus {
 }
 
 .foundation-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, max-content));
-  gap: 10px;
-  align-content: start;
-  align-items: start;
-  min-height: 0;
+  position: relative;
+  min-height: 520px;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
+  background:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 36px 36px;
+  border-radius: 8px;
 }
 
 .foundation-card {
   display: grid;
-  position: relative;
   gap: 7px;
-  width: fit-content;
+  position: absolute;
   min-width: 170px;
   max-width: 280px;
+  width: max-content;
   padding: 10px;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid #dbe3ef;
   border-radius: 8px;
   box-shadow: 0 5px 16px rgba(15, 23, 42, 0.035);
+  cursor: default;
+  user-select: none;
+  touch-action: none;
+}
+
+.foundation-card.is-editing {
+  cursor: grab;
+}
+
+.foundation-card.dragging {
+  z-index: 20;
+  cursor: grabbing;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.16);
 }
 
 .foundation-card p {
@@ -574,6 +588,30 @@ select:focus {
   line-height: 1.35;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.foundation-card textarea {
+  user-select: text;
+  touch-action: auto;
+}
+
+.foundation-color-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.foundation-color-button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  border-radius: 999px;
+}
+
+.foundation-color-button.active {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .foundation-actions {

@@ -253,7 +253,20 @@ let activeDraftDate = "";
 let activeDraftSlot = "";
 let pendingHistoryScrollDate = "";
 let foundationMode = "view";
+let activeFoundationDrag = null;
 const observationDrafts = {};
+
+const foundationPalette = [
+  { name: "white", background: "rgba(255, 255, 255, 0.94)", border: "#dbe3ef" },
+  { name: "blue", background: "#eff6ff", border: "#93c5fd" },
+  { name: "yellow", background: "#fefce8", border: "#fde68a" },
+  { name: "green", background: "#f0fdf4", border: "#86efac" },
+  { name: "pink", background: "#fdf2f8", border: "#f9a8d4" },
+  { name: "violet", background: "#f5f3ff", border: "#c4b5fd" },
+  { name: "gray", background: "#f8fafc", border: "#cbd5e1" }
+];
+const foundationColumnWidth = 300;
+const foundationRowGap = 14;
 
 const backupDatabaseName = "selfObservationBackup";
 const backupDatabaseStore = "handles";
@@ -1215,38 +1228,225 @@ function renderTasks() {
   });
 }
 
+function getFoundationPaletteItem(colorName) {
+  return foundationPalette.find((item) => item.name === colorName) || foundationPalette[0];
+}
+
+function getDefaultFoundationPosition(index) {
+  const rowHeight = 132;
+  const columns = Math.max(1, Math.floor((foundationList.clientWidth || 1000) / foundationColumnWidth));
+
+  return {
+    x: 0 + (index % columns) * foundationColumnWidth,
+    y: 0 + Math.floor(index / columns) * rowHeight
+  };
+}
+
+function hasFoundationPosition(foundation) {
+  return Number.isFinite(Number(foundation?.x)) && Number.isFinite(Number(foundation?.y));
+}
+
+function normalizeFoundation(foundation, index) {
+  const safeFoundation = foundation && typeof foundation === "object"
+    ? foundation
+    : { text: String(foundation || "") };
+  const defaultPosition = getDefaultFoundationPosition(index);
+  const x = Number.isFinite(Number(safeFoundation.x)) ? Number(safeFoundation.x) : defaultPosition.x;
+  const y = Number.isFinite(Number(safeFoundation.y)) ? Number(safeFoundation.y) : defaultPosition.y;
+  const color = getFoundationPaletteItem(safeFoundation.color).name;
+
+  return {
+    ...safeFoundation,
+    text: String(safeFoundation.text || ""),
+    x,
+    y,
+    color,
+    manual: safeFoundation.manual === true
+  };
+}
+
+function getFoundationAutoLayoutColumns() {
+  const boardWidth = foundationList.clientWidth || 1000;
+  const columns = Math.max(1, Math.floor(boardWidth / foundationColumnWidth));
+
+  return Array.from({ length: columns }, (_, index) => ({
+    x: index * foundationColumnWidth,
+    y: 0
+  }));
+}
+
+function placeFoundationInNextGap(card, foundation, columns) {
+  const targetColumn = columns.reduce((best, column) => (column.y < best.y ? column : best), columns[0]);
+  foundation.x = targetColumn.x;
+  foundation.y = targetColumn.y;
+  applyFoundationCardStyle(card, foundation);
+  targetColumn.y += card.offsetHeight + foundationRowGap;
+}
+
+function reserveFoundationSpace(card, foundation, columns) {
+  const targetColumn = columns.reduce((best, column) => {
+    const distance = Math.abs(column.x - foundation.x);
+    const bestDistance = Math.abs(best.x - foundation.x);
+    return distance < bestDistance ? column : best;
+  }, columns[0]);
+  targetColumn.y = Math.max(targetColumn.y, foundation.y + card.offsetHeight + foundationRowGap);
+}
+
+function applyFoundationCardStyle(card, foundation) {
+  const color = getFoundationPaletteItem(foundation.color);
+  card.style.left = `${Math.max(0, Number(foundation.x) || 0)}px`;
+  card.style.top = `${Math.max(0, Number(foundation.y) || 0)}px`;
+  card.style.background = color.background;
+  card.style.borderColor = color.border;
+}
+
+function updateFoundationBoardSize() {
+  const cards = Array.from(foundationList.querySelectorAll(".foundation-card"));
+  const bottom = cards.reduce((max, card) => {
+    const top = Number.parseFloat(card.style.top) || 0;
+    return Math.max(max, top + card.offsetHeight + 36);
+  }, 520);
+  const right = cards.reduce((max, card) => {
+    const left = Number.parseFloat(card.style.left) || 0;
+    return Math.max(max, left + card.offsetWidth + 36);
+  }, foundationList.clientWidth || 0);
+
+  foundationList.style.minHeight = `${Math.ceil(bottom)}px`;
+  foundationList.style.minWidth = `${Math.max(right, foundationList.clientWidth || 0)}px`;
+}
+
+function startFoundationDrag(event, card, index) {
+  if (foundationMode !== "edit") {
+    return;
+  }
+
+  if (event.target.closest("textarea, button, input")) {
+    return;
+  }
+
+  const boardRect = foundationList.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+
+  activeFoundationDrag = {
+    index,
+    card,
+    pointerId: event.pointerId,
+    offsetX: event.clientX - cardRect.left,
+    offsetY: event.clientY - cardRect.top,
+    boardLeft: boardRect.left,
+    boardTop: boardRect.top
+  };
+
+  card.classList.add("dragging");
+  card.setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+
+function moveFoundationDrag(event) {
+  if (!activeFoundationDrag || event.pointerId !== activeFoundationDrag.pointerId) {
+    return;
+  }
+
+  const x = Math.max(0, event.clientX - activeFoundationDrag.boardLeft + foundationList.scrollLeft - activeFoundationDrag.offsetX);
+  const y = Math.max(0, event.clientY - activeFoundationDrag.boardTop + foundationList.scrollTop - activeFoundationDrag.offsetY);
+
+  activeFoundationDrag.card.style.left = `${Math.round(x)}px`;
+  activeFoundationDrag.card.style.top = `${Math.round(y)}px`;
+  updateFoundationBoardSize();
+}
+
+function stopFoundationDrag(event) {
+  if (!activeFoundationDrag || event.pointerId !== activeFoundationDrag.pointerId) {
+    return;
+  }
+
+  const { card, index } = activeFoundationDrag;
+
+  card.classList.remove("dragging");
+  savedData.foundations[index].x = Math.round(Number.parseFloat(card.style.left) || 0);
+  savedData.foundations[index].y = Math.round(Number.parseFloat(card.style.top) || 0);
+  savedData.foundations[index].manual = true;
+  savedData.foundations[index].updated = new Date().toLocaleString();
+  activeFoundationDrag = null;
+  saveData();
+}
+
 function renderFoundations() {
   foundationList.innerHTML = "";
   foundationEditModeButton.classList.toggle("active", foundationMode === "edit");
   foundationDeleteModeButton.classList.toggle("active", foundationMode === "delete");
 
+  let didNormalize = false;
+  const autoLayoutColumns = getFoundationAutoLayoutColumns();
+  const manualCards = [];
+  const autoCards = [];
+
   savedData.foundations.forEach((foundation, index) => {
+    const hadPosition = hasFoundationPosition(foundation);
+    const normalizedFoundation = normalizeFoundation(foundation, index);
+    savedData.foundations[index] = normalizedFoundation;
+    didNormalize = didNormalize
+      || normalizedFoundation.text !== foundation?.text
+      || normalizedFoundation.color !== foundation?.color
+      || normalizedFoundation.manual !== foundation?.manual
+      || !hadPosition;
+
     const card = document.createElement("article");
     const content = document.createElement("p");
 
     card.className = "foundation-card";
-    content.textContent = foundation.text;
+    card.dataset.index = index;
+    card.classList.toggle("is-editing", foundationMode === "edit");
+    applyFoundationCardStyle(card, normalizedFoundation);
+    content.textContent = normalizedFoundation.text;
+
+    card.addEventListener("pointerdown", (event) => startFoundationDrag(event, card, index));
+    card.addEventListener("pointermove", moveFoundationDrag);
+    card.addEventListener("pointerup", stopFoundationDrag);
+    card.addEventListener("pointercancel", stopFoundationDrag);
 
     if (foundationMode === "edit") {
       const editor = document.createElement("textarea");
+      const colorRow = document.createElement("div");
       editor.className = "foundation-editor";
+      colorRow.className = "foundation-color-row";
       editor.rows = 3;
-      editor.value = foundation.text;
+      editor.value = normalizedFoundation.text;
 
       editor.addEventListener("change", () => {
         const nextText = editor.value.trim();
 
         if (nextText === "") {
-          editor.value = foundation.text;
+          editor.value = normalizedFoundation.text;
           return;
         }
 
         savedData.foundations[index].text = nextText;
         savedData.foundations[index].updated = new Date().toLocaleString();
         saveData();
+        renderFoundations();
       });
 
-      card.append(editor);
+      foundationPalette.forEach((paletteItem) => {
+        const colorButton = document.createElement("button");
+        colorButton.className = "foundation-color-button";
+        colorButton.type = "button";
+        colorButton.title = paletteItem.name;
+        colorButton.style.background = paletteItem.background;
+        colorButton.style.borderColor = paletteItem.border;
+        colorButton.classList.toggle("active", normalizedFoundation.color === paletteItem.name);
+
+        colorButton.addEventListener("click", () => {
+          savedData.foundations[index].color = paletteItem.name;
+          savedData.foundations[index].updated = new Date().toLocaleString();
+          saveData();
+          renderFoundations();
+        });
+
+        colorRow.append(colorButton);
+      });
+
+      card.append(editor, colorRow);
     } else {
       card.append(content);
     }
@@ -1261,7 +1461,7 @@ function renderFoundations() {
       deleteButton.addEventListener("click", async () => {
         const shouldDelete = await askForConfirmation({
           title: "Delete foundation?",
-          message: foundation.text,
+          message: normalizedFoundation.text,
           confirmText: "Delete"
         });
 
@@ -1278,7 +1478,28 @@ function renderFoundations() {
     }
 
     foundationList.append(card);
+
+    if (normalizedFoundation.manual) {
+      applyFoundationCardStyle(card, normalizedFoundation);
+      manualCards.push({ card, foundation: normalizedFoundation });
+    } else {
+      autoCards.push({ card, foundation: normalizedFoundation });
+    }
   });
+
+  manualCards.forEach(({ card, foundation }) => {
+    reserveFoundationSpace(card, foundation, autoLayoutColumns);
+  });
+
+  autoCards.forEach(({ card, foundation }) => {
+    placeFoundationInNextGap(card, foundation, autoLayoutColumns);
+  });
+
+  updateFoundationBoardSize();
+
+  if (didNormalize) {
+    saveData();
+  }
 }
 
 function getTodayDate() {
@@ -2459,7 +2680,8 @@ foundationForm.addEventListener("submit", (event) => {
 
   savedData.foundations.push({
     text,
-    date: new Date().toLocaleString()
+    date: new Date().toLocaleString(),
+    manual: false
   });
 
   foundationInput.value = "";

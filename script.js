@@ -281,6 +281,7 @@ let pendingHistoryScrollDate = "";
 let foundationMode = "view";
 let foundation2Mode = "view";
 let activeFoundationDrag = null;
+let activeFoundation2Drag = null;
 const observationDrafts = {};
 
 const foundationPalette = [
@@ -1598,6 +1599,111 @@ function applyFoundation2CardStyle(card, item) {
   card.style.borderColor = color.border;
 }
 
+function getFoundation2DropIndex(list, clientY) {
+  const cards = Array.from(list.querySelectorAll(".foundation2-card:not(.dragging)"));
+  const beforeCard = cards.find((card) => {
+    const rect = card.getBoundingClientRect();
+    return clientY < rect.top + rect.height / 2;
+  });
+
+  if (!beforeCard) {
+    return savedData.foundation2.columns[Number(list.dataset.column) || 0]?.length || 0;
+  }
+
+  return Number(beforeCard.dataset.itemIndex) || 0;
+}
+
+function moveFoundation2Item(fromColumn, fromIndex, toColumn, toIndex) {
+  const fromItems = savedData.foundation2.columns[fromColumn];
+  const toItems = savedData.foundation2.columns[toColumn];
+
+  if (!fromItems || !toItems || !fromItems[fromIndex]) {
+    return false;
+  }
+
+  let normalizedTargetIndex = Math.max(0, Math.min(toIndex, toItems.length));
+
+  if (fromColumn === toColumn && fromIndex < normalizedTargetIndex) {
+    normalizedTargetIndex -= 1;
+  }
+
+  if (fromColumn === toColumn && fromIndex === normalizedTargetIndex) {
+    return false;
+  }
+
+  const [item] = fromItems.splice(fromIndex, 1);
+  item.updated = new Date().toLocaleString();
+  savedData.foundation2.columns[toColumn].splice(normalizedTargetIndex, 0, item);
+  saveData();
+  return true;
+}
+
+function handleFoundation2DragStart(event, columnIndex, itemIndex) {
+  if (foundation2Mode !== "view") {
+    event.preventDefault();
+    return;
+  }
+
+  activeFoundation2Drag = {
+    columnIndex,
+    itemIndex
+  };
+
+  event.currentTarget.classList.add("dragging");
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", `${columnIndex}:${itemIndex}`);
+  }
+}
+
+function handleFoundation2DragEnd(event) {
+  event.currentTarget.classList.remove("dragging");
+  foundation2Lists.forEach((list) => list.classList.remove("drag-over"));
+  activeFoundation2Drag = null;
+}
+
+function handleFoundation2DragOver(event) {
+  if (!activeFoundation2Drag || foundation2Mode !== "view") {
+    return;
+  }
+
+  event.preventDefault();
+  event.currentTarget.classList.add("drag-over");
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "move";
+  }
+}
+
+function handleFoundation2DragLeave(event) {
+  if (!event.currentTarget.contains(event.relatedTarget)) {
+    event.currentTarget.classList.remove("drag-over");
+  }
+}
+
+function handleFoundation2Drop(event) {
+  if (!activeFoundation2Drag || foundation2Mode !== "view") {
+    return;
+  }
+
+  event.preventDefault();
+  const list = event.currentTarget;
+  list.classList.remove("drag-over");
+  const toColumn = Number(list.dataset.column) || 0;
+  const toIndex = getFoundation2DropIndex(list, event.clientY);
+  const didMove = moveFoundation2Item(
+    activeFoundation2Drag.columnIndex,
+    activeFoundation2Drag.itemIndex,
+    toColumn,
+    toIndex
+  );
+
+  activeFoundation2Drag = null;
+
+  if (didMove) {
+    renderFoundation2();
+  }
+}
+
 function renderFoundation2() {
   foundation2EditModeButton.classList.toggle("active", foundation2Mode === "edit");
   foundation2DeleteModeButton.classList.toggle("active", foundation2Mode === "delete");
@@ -1618,7 +1724,13 @@ function renderFoundation2() {
       const card = document.createElement("article");
       card.className = "foundation-card foundation2-card";
       card.classList.toggle("is-editing", foundation2Mode === "edit");
+      card.classList.toggle("is-action-mode", foundation2Mode !== "view");
+      card.draggable = foundation2Mode === "view";
+      card.dataset.columnIndex = columnIndex;
+      card.dataset.itemIndex = itemIndex;
       applyFoundation2CardStyle(card, normalizedItem);
+      card.addEventListener("dragstart", (event) => handleFoundation2DragStart(event, columnIndex, itemIndex));
+      card.addEventListener("dragend", handleFoundation2DragEnd);
 
       if (foundation2Mode === "edit") {
         const editor = document.createElement("textarea");
@@ -2899,6 +3011,12 @@ foundationDeleteModeButton.addEventListener("click", () => {
 foundation2MainInput.addEventListener("input", () => {
   savedData.foundation2.main = foundation2MainInput.value;
   saveData();
+});
+
+foundation2Lists.forEach((list) => {
+  list.addEventListener("dragover", handleFoundation2DragOver);
+  list.addEventListener("dragleave", handleFoundation2DragLeave);
+  list.addEventListener("drop", handleFoundation2Drop);
 });
 
 foundation2Form.addEventListener("submit", (event) => {

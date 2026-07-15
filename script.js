@@ -22,6 +22,13 @@ const foundationInput = document.querySelector("#foundationInput");
 const foundationList = document.querySelector("#foundationList");
 const foundationEditModeButton = document.querySelector("#foundationEditModeButton");
 const foundationDeleteModeButton = document.querySelector("#foundationDeleteModeButton");
+const foundation2Form = document.querySelector("#foundation2Form");
+const foundation2MainInput = document.querySelector("#foundation2MainInput");
+const foundation2Input = document.querySelector("#foundation2Input");
+const foundation2ColumnSelect = document.querySelector("#foundation2ColumnSelect");
+const foundation2Lists = document.querySelectorAll(".foundation2-list");
+const foundation2EditModeButton = document.querySelector("#foundation2EditModeButton");
+const foundation2DeleteModeButton = document.querySelector("#foundation2DeleteModeButton");
 
 const observationForm = document.querySelector("#observationForm");
 const observationDate = document.querySelector("#observationDate");
@@ -204,6 +211,10 @@ const emptySavedData = {
   complaints: [],
   tasks: [],
   foundations: [],
+  foundation2: {
+    main: "",
+    columns: [[], [], []]
+  },
   documents: [],
   observations: {}
 };
@@ -245,6 +256,21 @@ if (!savedData.foundations) {
   savedData.foundations = [];
 }
 
+if (!savedData.foundation2 || typeof savedData.foundation2 !== "object" || Array.isArray(savedData.foundation2)) {
+  savedData.foundation2 = {
+    main: "",
+    columns: [[], [], []]
+  };
+}
+
+if (!Array.isArray(savedData.foundation2.columns)) {
+  savedData.foundation2.columns = [[], [], []];
+}
+
+savedData.foundation2.columns = [0, 1, 2].map((index) => (
+  Array.isArray(savedData.foundation2.columns[index]) ? savedData.foundation2.columns[index] : []
+));
+
 let visibleCalendarDate = new Date();
 let visibleDatePickerDate = new Date();
 let backupDirectoryHandle = null;
@@ -253,6 +279,7 @@ let activeDraftDate = "";
 let activeDraftSlot = "";
 let pendingHistoryScrollDate = "";
 let foundationMode = "view";
+let foundation2Mode = "view";
 let activeFoundationDrag = null;
 const observationDrafts = {};
 
@@ -413,12 +440,26 @@ function normalizeSavedData(data) {
   const normalizedData = data && typeof data === "object" && !Array.isArray(data)
     ? data
     : {};
+  const normalizedFoundation2 = normalizedData.foundation2
+    && typeof normalizedData.foundation2 === "object"
+    && !Array.isArray(normalizedData.foundation2)
+      ? normalizedData.foundation2
+      : {};
+  const foundation2Columns = Array.isArray(normalizedFoundation2.columns)
+    ? normalizedFoundation2.columns
+    : [];
 
   return {
     diary: Array.isArray(normalizedData.diary) ? normalizedData.diary : [],
     complaints: Array.isArray(normalizedData.complaints) ? normalizedData.complaints : [],
     tasks: Array.isArray(normalizedData.tasks) ? normalizedData.tasks : [],
     foundations: Array.isArray(normalizedData.foundations) ? normalizedData.foundations : [],
+    foundation2: {
+      main: String(normalizedFoundation2.main || ""),
+      columns: [0, 1, 2].map((index) => (
+        Array.isArray(foundation2Columns[index]) ? foundation2Columns[index] : []
+      ))
+    },
     documents: Array.isArray(normalizedData.documents) ? normalizedData.documents : [],
     observations: normalizedData.observations
       && typeof normalizedData.observations === "object"
@@ -443,6 +484,7 @@ function refreshAppViews() {
   renderBasicFolder();
   renderTasks();
   renderFoundations();
+  renderFoundation2();
   loadObservation(getObservationDateValue());
   renderObservationHistory();
   renderCalendar();
@@ -1536,6 +1578,125 @@ function renderFoundations() {
   if (didNormalize) {
     saveData();
   }
+}
+
+function normalizeFoundation2Item(item) {
+  const safeItem = item && typeof item === "object"
+    ? item
+    : { text: String(item || "") };
+
+  return {
+    ...safeItem,
+    text: String(safeItem.text || ""),
+    color: getFoundationPaletteItem(safeItem.color).name
+  };
+}
+
+function applyFoundation2CardStyle(card, item) {
+  const color = getFoundationPaletteItem(item.color);
+  card.style.background = color.background;
+  card.style.borderColor = color.border;
+}
+
+function renderFoundation2() {
+  foundation2EditModeButton.classList.toggle("active", foundation2Mode === "edit");
+  foundation2DeleteModeButton.classList.toggle("active", foundation2Mode === "delete");
+
+  if (foundation2MainInput.value !== savedData.foundation2.main) {
+    foundation2MainInput.value = savedData.foundation2.main || "";
+  }
+
+  foundation2Lists.forEach((list) => {
+    list.innerHTML = "";
+    const columnIndex = Number(list.dataset.column) || 0;
+    const columnItems = savedData.foundation2.columns[columnIndex] || [];
+
+    columnItems.forEach((item, itemIndex) => {
+      const normalizedItem = normalizeFoundation2Item(item);
+      savedData.foundation2.columns[columnIndex][itemIndex] = normalizedItem;
+
+      const card = document.createElement("article");
+      card.className = "foundation-card foundation2-card";
+      card.classList.toggle("is-editing", foundation2Mode === "edit");
+      applyFoundation2CardStyle(card, normalizedItem);
+
+      if (foundation2Mode === "edit") {
+        const editor = document.createElement("textarea");
+        const colorRow = document.createElement("div");
+        editor.className = "foundation-editor";
+        colorRow.className = "foundation-color-row";
+        editor.rows = 3;
+        editor.value = normalizedItem.text;
+
+        editor.addEventListener("change", () => {
+          const nextText = editor.value.trim();
+
+          if (nextText === "") {
+            editor.value = normalizedItem.text;
+            return;
+          }
+
+          savedData.foundation2.columns[columnIndex][itemIndex].text = nextText;
+          savedData.foundation2.columns[columnIndex][itemIndex].updated = new Date().toLocaleString();
+          saveData();
+          renderFoundation2();
+        });
+
+        foundationPalette.forEach((paletteItem) => {
+          const colorButton = document.createElement("button");
+          colorButton.className = "foundation-color-button";
+          colorButton.type = "button";
+          colorButton.title = paletteItem.name;
+          colorButton.style.background = paletteItem.background;
+          colorButton.style.borderColor = paletteItem.border;
+          colorButton.classList.toggle("active", normalizedItem.color === paletteItem.name);
+
+          colorButton.addEventListener("click", () => {
+            savedData.foundation2.columns[columnIndex][itemIndex].color = paletteItem.name;
+            savedData.foundation2.columns[columnIndex][itemIndex].updated = new Date().toLocaleString();
+            saveData();
+            renderFoundation2();
+          });
+
+          colorRow.append(colorButton);
+        });
+
+        card.append(editor, colorRow);
+      } else {
+        const content = document.createElement("p");
+        content.textContent = normalizedItem.text;
+        card.append(content);
+      }
+
+      if (foundation2Mode === "delete") {
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "foundation-delete-x";
+        deleteButton.type = "button";
+        deleteButton.textContent = "×";
+        deleteButton.setAttribute("aria-label", "Delete foundation 2 note");
+
+        deleteButton.addEventListener("click", async () => {
+          const shouldDelete = await askForConfirmation({
+            title: "Delete note?",
+            message: normalizedItem.text,
+            confirmText: "Delete"
+          });
+
+          if (!shouldDelete) {
+            return;
+          }
+
+          savedData.foundation2.columns[columnIndex].splice(itemIndex, 1);
+          saveData();
+          renderFoundation2();
+        });
+
+        card.append(deleteButton);
+      }
+
+      list.append(card);
+    });
+  });
 }
 
 function getTodayDate() {
@@ -2735,6 +2896,42 @@ foundationDeleteModeButton.addEventListener("click", () => {
   renderFoundations();
 });
 
+foundation2MainInput.addEventListener("input", () => {
+  savedData.foundation2.main = foundation2MainInput.value;
+  saveData();
+});
+
+foundation2Form.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const text = foundation2Input.value.trim();
+  const columnIndex = Number(foundation2ColumnSelect.value) || 0;
+
+  if (text === "") {
+    return;
+  }
+
+  savedData.foundation2.columns[columnIndex].push({
+    text,
+    color: "white",
+    date: new Date().toLocaleString()
+  });
+
+  foundation2Input.value = "";
+  saveData();
+  renderFoundation2();
+});
+
+foundation2EditModeButton.addEventListener("click", () => {
+  foundation2Mode = foundation2Mode === "edit" ? "view" : "edit";
+  renderFoundation2();
+});
+
+foundation2DeleteModeButton.addEventListener("click", () => {
+  foundation2Mode = foundation2Mode === "delete" ? "view" : "delete";
+  renderFoundation2();
+});
+
 setObservationDateValue(getTodayDate());
 setActiveFoodSlot(getCurrentFoodSlot());
 createScoreButtons();
@@ -2887,6 +3084,7 @@ renderDocuments();
 renderBasicFolder();
 renderTasks();
 renderFoundations();
+renderFoundation2();
 renderObservationHistory();
 renderCalendar();
 initializeBackupFolder();

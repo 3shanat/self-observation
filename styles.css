@@ -671,6 +671,131 @@ select:focus {
   background: #fecaca;
 }
 
+.foundation2-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 12px;
+  min-height: 620px;
+  padding: 18px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+}
+
+.foundation2-main-input {
+  width: 100%;
+  min-height: 84px;
+  max-height: 140px;
+  padding: 12px 14px;
+  color: #14532d;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.35;
+  resize: vertical;
+  background: linear-gradient(180deg, #dcfce7, #bbf7d0);
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(21, 128, 61, 0.08);
+}
+
+.foundation2-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.foundation2-form textarea,
+.foundation2-form select {
+  min-width: 0;
+  height: 42px;
+  padding: 8px 10px;
+  color: #1f2937;
+  font-size: 13px;
+  font-family: inherit;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.foundation2-form textarea {
+  resize: vertical;
+}
+
+.foundation2-form button {
+  height: 32px;
+  padding: 0 12px;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #dbe3ef;
+}
+
+.foundation2-form button:first-child {
+  color: #1e3a8a;
+  background: #dbeafe;
+  border-color: #bfdbfe;
+}
+
+.foundation2-form button.active {
+  color: #0f172a;
+  background: #fde68a;
+  border-color: #facc15;
+}
+
+.foundation2-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  min-height: 0;
+}
+
+.foundation2-column {
+  min-height: 0;
+  padding: 10px;
+  background: rgba(248, 250, 252, 0.72);
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+}
+
+.foundation2-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  height: min(56vh, 520px);
+  min-height: 360px;
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-color: rgba(100, 116, 139, 0.32) transparent;
+  scrollbar-width: thin;
+}
+
+.foundation2-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.foundation2-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.foundation2-list::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.28);
+  border-radius: 999px;
+}
+
+.foundation2-card {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  cursor: default;
+  touch-action: auto;
+}
+
+.foundation2-card,
+.foundation2-card.is-editing {
+  cursor: default;
+}
+
 .entry-card,
 .task-item {
   padding: 14px;
@@ -2279,7 +2404,9 @@ li {
   .calendar-grid,
   .task-form,
   .task-list,
-  .foundations-panel {
+  .foundations-panel,
+  .foundation2-panel,
+  .foundation2-column {
     border-radius: 14px;
   }
 
@@ -2671,6 +2798,24 @@ li {
 
   .task-item {
     border-radius: 14px;
+  }
+
+  .foundation2-form {
+    grid-template-columns: 1fr;
+  }
+
+  .foundation2-form textarea,
+  .foundation2-form select {
+    width: 100%;
+  }
+
+  .foundation2-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .foundation2-list {
+    height: 340px;
+    min-height: 260px;
   }
 
 }

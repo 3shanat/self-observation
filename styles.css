@@ -750,11 +750,22 @@ select:focus {
 }
 
 .foundation2-column {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
   min-height: 0;
   padding: 10px;
   background: rgba(248, 250, 252, 0.72);
   border: 1px solid #dbe3ef;
   border-radius: 8px;
+}
+
+.foundation2-column h3 {
+  margin: 0;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
 .foundation2-list {

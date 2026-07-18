@@ -312,6 +312,8 @@ const foundationCardGap = 14;
 const backupDatabaseName = "selfObservationBackup";
 const backupDatabaseStore = "handles";
 const backupDirectoryKey = "directory";
+const defaultCloudSyncUrl = "https://betclkevyzkhbhrvhafv.supabase.co";
+const defaultCloudSyncKey = "sb_publishable_1oNocQA5OZm-hhbLotswUw_7E-bZQc-";
 const cloudSyncSettingsKey = "selfObservationCloudSyncSettings";
 const cloudSyncSessionKey = "selfObservationCloudSyncSession";
 const cloudSyncTableName = "self_observation_sync";
@@ -486,13 +488,13 @@ function readCloudSyncSettings() {
 
     return settings && typeof settings === "object"
       ? {
-        url: String(settings.url || "").replace(/\/+$/, ""),
-        anonKey: String(settings.anonKey || ""),
+        url: String(settings.url || defaultCloudSyncUrl).replace(/\/+$/, ""),
+        anonKey: String(settings.anonKey || defaultCloudSyncKey),
         email: String(settings.email || "")
       }
-      : { url: "", anonKey: "", email: "" };
+      : { url: defaultCloudSyncUrl, anonKey: defaultCloudSyncKey, email: "" };
   } catch (error) {
-    return { url: "", anonKey: "", email: "" };
+    return { url: defaultCloudSyncUrl, anonKey: defaultCloudSyncKey, email: "" };
   }
 }
 
@@ -550,7 +552,7 @@ function fillCloudSyncForm() {
 
 function validateCloudSyncSettings(settings) {
   if (!settings.url || !settings.anonKey) {
-    throw new Error("Add Supabase Project URL and anon public key first.");
+    throw new Error("Add Supabase Project URL and public key first.");
   }
 }
 

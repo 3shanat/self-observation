@@ -11,10 +11,10 @@
   <meta name="apple-mobile-web-app-title" content="Self-Observation">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Self-Observation</title>
-  <link rel="manifest" href="manifest.webmanifest?v=158">
-  <link rel="apple-touch-icon" href="assets/SelfObservationAppIcon1024.png?v=158">
-  <link rel="icon" href="assets/SelfObservationAppIcon1024.png?v=158">
-  <link rel="stylesheet" href="styles.css?v=158">
+  <link rel="manifest" href="manifest.webmanifest?v=159">
+  <link rel="apple-touch-icon" href="assets/SelfObservationAppIcon1024.png?v=159">
+  <link rel="icon" href="assets/SelfObservationAppIcon1024.png?v=159">
+  <link rel="stylesheet" href="styles.css?v=159">
 </head>
 <body>
   <main class="page">
@@ -24,11 +24,52 @@
       <button class="section-button" data-section="foundation2" type="button">Biocoding</button>
       <button class="section-button backup-folder-button" id="chooseBackupFolderButton" type="button">Choose folder</button>
       <button class="section-button import-backup-button" id="importBackupButton" type="button">Import backup</button>
+      <button class="section-button cloud-sync-button" data-section="cloudSync" type="button">Cloud Sync</button>
       <button class="section-button" data-section="tasks" type="button">Tasks</button>
       <input id="backupFileInput" type="file" accept="application/json,.json">
     </nav>
 
     <section class="app-panel">
+      <section class="app-section" id="cloudSync">
+        <div class="cloud-sync-panel">
+          <div class="cloud-sync-status-row">
+            <strong>Cloud Sync</strong>
+            <span id="cloudSyncStatus">Not connected</span>
+          </div>
+          <div class="cloud-sync-grid">
+            <label>
+              Project URL
+              <input id="cloudSyncUrlInput" type="url" placeholder="https://xxxx.supabase.co">
+            </label>
+            <label>
+              Anon public key
+              <input id="cloudSyncKeyInput" type="password" placeholder="eyJ...">
+            </label>
+            <label>
+              Email
+              <input id="cloudSyncEmailInput" type="email" placeholder="you@example.com">
+            </label>
+            <label>
+              Password
+              <input id="cloudSyncPasswordInput" type="password" placeholder="Minimum 6 characters">
+            </label>
+          </div>
+          <div class="cloud-sync-actions">
+            <button id="cloudSyncSaveSettingsButton" type="button">Save settings</button>
+            <button id="cloudSyncSignUpButton" type="button">Create account</button>
+            <button id="cloudSyncSignInButton" type="button">Sign in</button>
+            <button id="cloudSyncPullButton" type="button">Pull from cloud</button>
+            <button id="cloudSyncPushButton" type="button">Push to cloud</button>
+            <button id="cloudSyncDisconnectButton" type="button">Disconnect</button>
+          </div>
+          <details class="cloud-sync-setup">
+            <summary>Supabase table setup</summary>
+            <textarea id="cloudSyncSql" readonly rows="9"></textarea>
+            <button id="cloudSyncCopySqlButton" type="button">Copy SQL</button>
+          </details>
+        </div>
+      </section>
+
       <section class="app-section" id="diary">
         <form class="entry-form" id="diaryForm">
           <textarea id="diaryInput" rows="4" placeholder="What did I understand, do, or notice today?"></textarea>
@@ -284,11 +325,11 @@
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="script.js?v=158"></script>
+  <script src="script.js?v=159"></script>
   <script>
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("sw.js?v=158").catch(() => {});
+        navigator.serviceWorker.register("sw.js?v=159").catch(() => {});
       });
     }
   </script>

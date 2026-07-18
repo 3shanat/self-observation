@@ -40,6 +40,19 @@ const goToCalendarButton = document.querySelector("#goToCalendarButton");
 const chooseBackupFolderButton = document.querySelector("#chooseBackupFolderButton");
 const importBackupButton = document.querySelector("#importBackupButton");
 const backupFileInput = document.querySelector("#backupFileInput");
+const cloudSyncStatus = document.querySelector("#cloudSyncStatus");
+const cloudSyncUrlInput = document.querySelector("#cloudSyncUrlInput");
+const cloudSyncKeyInput = document.querySelector("#cloudSyncKeyInput");
+const cloudSyncEmailInput = document.querySelector("#cloudSyncEmailInput");
+const cloudSyncPasswordInput = document.querySelector("#cloudSyncPasswordInput");
+const cloudSyncSaveSettingsButton = document.querySelector("#cloudSyncSaveSettingsButton");
+const cloudSyncSignUpButton = document.querySelector("#cloudSyncSignUpButton");
+const cloudSyncSignInButton = document.querySelector("#cloudSyncSignInButton");
+const cloudSyncPullButton = document.querySelector("#cloudSyncPullButton");
+const cloudSyncPushButton = document.querySelector("#cloudSyncPushButton");
+const cloudSyncDisconnectButton = document.querySelector("#cloudSyncDisconnectButton");
+const cloudSyncSql = document.querySelector("#cloudSyncSql");
+const cloudSyncCopySqlButton = document.querySelector("#cloudSyncCopySqlButton");
 const calendarMonth = document.querySelector("#calendarMonth");
 const calendarGrid = document.querySelector("#calendarGrid");
 const previousMonthButton = document.querySelector("#previousMonthButton");
@@ -299,10 +312,40 @@ const foundationCardGap = 14;
 const backupDatabaseName = "selfObservationBackup";
 const backupDatabaseStore = "handles";
 const backupDirectoryKey = "directory";
+const cloudSyncSettingsKey = "selfObservationCloudSyncSettings";
+const cloudSyncSessionKey = "selfObservationCloudSyncSession";
+const cloudSyncTableName = "self_observation_sync";
+const cloudSyncSqlText = `create table if not exists public.self_observation_sync (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  payload jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.self_observation_sync enable row level security;
+
+create policy "Users can read their own sync data"
+on public.self_observation_sync for select
+using (auth.uid() = user_id);
+
+create policy "Users can insert their own sync data"
+on public.self_observation_sync for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can update their own sync data"
+on public.self_observation_sync for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);`;
+let cloudSyncTimer = 0;
+let cloudSyncIsBusy = false;
+let cloudSyncLastPulledAt = "";
+let cloudSyncLastPushedAt = "";
+let cloudSyncLastCheckedAt = 0;
+let cloudSyncSuppressPush = false;
 
 function saveData() {
   localStorage.setItem("personalDashboard", JSON.stringify(savedData));
   scheduleAutomaticBackup();
+  scheduleCloudSyncPush();
 }
 
 function openBackupDatabase() {
@@ -435,6 +478,343 @@ async function initializeBackupFolder() {
     chooseBackupFolderButton.textContent = "Choose folder";
     chooseBackupFolderButton.classList.remove("connected");
   }
+}
+
+function readCloudSyncSettings() {
+  try {
+    const settings = JSON.parse(localStorage.getItem(cloudSyncSettingsKey) || "{}");
+
+    return settings && typeof settings === "object"
+      ? {
+        url: String(settings.url || "").replace(/\/+$/, ""),
+        anonKey: String(settings.anonKey || ""),
+        email: String(settings.email || "")
+      }
+      : { url: "", anonKey: "", email: "" };
+  } catch (error) {
+    return { url: "", anonKey: "", email: "" };
+  }
+}
+
+function saveCloudSyncSettings(settings) {
+  localStorage.setItem(cloudSyncSettingsKey, JSON.stringify({
+    url: String(settings.url || "").replace(/\/+$/, ""),
+    anonKey: String(settings.anonKey || ""),
+    email: String(settings.email || "")
+  }));
+}
+
+function readCloudSyncSession() {
+  try {
+    const session = JSON.parse(localStorage.getItem(cloudSyncSessionKey) || "{}");
+    return session && typeof session === "object" ? session : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveCloudSyncSession(session) {
+  if (!session || !session.access_token) {
+    localStorage.removeItem(cloudSyncSessionKey);
+    return;
+  }
+
+  localStorage.setItem(cloudSyncSessionKey, JSON.stringify({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token || "",
+    expires_at: session.expires_at || Math.floor(Date.now() / 1000) + Number(session.expires_in || 3600),
+    user: session.user || null
+  }));
+}
+
+function setCloudSyncStatus(message, state = "idle") {
+  cloudSyncStatus.textContent = message;
+  cloudSyncStatus.dataset.state = state;
+}
+
+function getCloudSyncSettingsFromInputs() {
+  return {
+    url: cloudSyncUrlInput.value.trim().replace(/\/+$/, ""),
+    anonKey: cloudSyncKeyInput.value.trim(),
+    email: cloudSyncEmailInput.value.trim()
+  };
+}
+
+function fillCloudSyncForm() {
+  const settings = readCloudSyncSettings();
+  cloudSyncUrlInput.value = settings.url;
+  cloudSyncKeyInput.value = settings.anonKey;
+  cloudSyncEmailInput.value = settings.email;
+  cloudSyncSql.value = cloudSyncSqlText;
+}
+
+function validateCloudSyncSettings(settings) {
+  if (!settings.url || !settings.anonKey) {
+    throw new Error("Add Supabase Project URL and anon public key first.");
+  }
+}
+
+function hasLocalSavedContent() {
+  const normalized = normalizeSavedData(savedData);
+
+  return normalized.diary.length > 0
+    || normalized.complaints.length > 0
+    || normalized.tasks.length > 0
+    || normalized.foundations.length > 0
+    || normalized.foundation2.main.trim() !== ""
+    || normalized.foundation2.columns.some((column) => column.length > 0)
+    || normalized.documents.length > 0
+    || Object.keys(normalized.observations).length > 0;
+}
+
+async function cloudSyncFetch(path, options = {}) {
+  const settings = readCloudSyncSettings();
+  validateCloudSyncSettings(settings);
+
+  const headers = {
+    apikey: settings.anonKey,
+    "Content-Type": "application/json",
+    ...(options.headers || {})
+  };
+
+  if (options.token) {
+    headers.Authorization = `Bearer ${options.token}`;
+  }
+
+  const response = await fetch(`${settings.url}${path}`, {
+    method: options.method || "GET",
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    const message = payload?.msg || payload?.message || payload?.error_description || payload?.hint || "Cloud sync request failed.";
+    throw new Error(message);
+  }
+
+  return payload;
+}
+
+async function refreshCloudSyncSession(session) {
+  if (!session?.refresh_token) {
+    throw new Error("Sign in again.");
+  }
+
+  const refreshedSession = await cloudSyncFetch("/auth/v1/token?grant_type=refresh_token", {
+    method: "POST",
+    body: {
+      refresh_token: session.refresh_token
+    }
+  });
+
+  saveCloudSyncSession(refreshedSession);
+  return readCloudSyncSession();
+}
+
+async function getValidCloudSyncSession() {
+  const session = readCloudSyncSession();
+
+  if (!session?.access_token) {
+    throw new Error("Sign in to Cloud Sync first.");
+  }
+
+  if (Number(session.expires_at || 0) > Math.floor(Date.now() / 1000) + 60) {
+    return session;
+  }
+
+  return refreshCloudSyncSession(session);
+}
+
+async function signUpCloudSync() {
+  const settings = getCloudSyncSettingsFromInputs();
+  const password = cloudSyncPasswordInput.value;
+  saveCloudSyncSettings(settings);
+  validateCloudSyncSettings(settings);
+
+  if (!settings.email || !password) {
+    throw new Error("Add email and password.");
+  }
+
+  const session = await cloudSyncFetch("/auth/v1/signup", {
+    method: "POST",
+    body: {
+      email: settings.email,
+      password
+    }
+  });
+
+  if (session?.access_token) {
+    saveCloudSyncSession(session);
+    setCloudSyncStatus("Account created. Sync ready.", "connected");
+    await pushCloudSyncData();
+    return;
+  }
+
+  setCloudSyncStatus("Account created. Confirm email, then sign in.", "idle");
+}
+
+async function signInCloudSync() {
+  const settings = getCloudSyncSettingsFromInputs();
+  const password = cloudSyncPasswordInput.value;
+  saveCloudSyncSettings(settings);
+  validateCloudSyncSettings(settings);
+
+  if (!settings.email || !password) {
+    throw new Error("Add email and password.");
+  }
+
+  const session = await cloudSyncFetch("/auth/v1/token?grant_type=password", {
+    method: "POST",
+    body: {
+      email: settings.email,
+      password
+    }
+  });
+
+  saveCloudSyncSession(session);
+  setCloudSyncStatus("Signed in. Checking cloud...", "connected");
+  await pullCloudSyncData({ allowInitialPush: true });
+}
+
+async function pushCloudSyncData() {
+  if (cloudSyncIsBusy) {
+    return;
+  }
+
+  cloudSyncIsBusy = true;
+  setCloudSyncStatus("Pushing to cloud...", "syncing");
+
+  try {
+    const session = await getValidCloudSyncSession();
+    const payload = normalizeSavedData(savedData);
+    const updatedAt = new Date().toISOString();
+
+    await cloudSyncFetch(`/rest/v1/${cloudSyncTableName}?on_conflict=user_id`, {
+      method: "POST",
+      token: session.access_token,
+      headers: {
+        Prefer: "resolution=merge-duplicates,return=representation"
+      },
+      body: {
+        user_id: session.user?.id,
+        payload,
+        updated_at: updatedAt
+      }
+    });
+
+    cloudSyncLastPushedAt = updatedAt;
+    setCloudSyncStatus("Synced to cloud.", "connected");
+  } finally {
+    cloudSyncIsBusy = false;
+  }
+}
+
+async function pullCloudSyncData(options = {}) {
+  if (cloudSyncIsBusy) {
+    return;
+  }
+
+  cloudSyncIsBusy = true;
+  setCloudSyncStatus("Pulling from cloud...", "syncing");
+
+  try {
+    const session = await getValidCloudSyncSession();
+    const userId = encodeURIComponent(session.user?.id || "");
+    const rows = await cloudSyncFetch(`/rest/v1/${cloudSyncTableName}?select=payload,updated_at&user_id=eq.${userId}&limit=1`, {
+      token: session.access_token,
+      headers: {
+        Accept: "application/json"
+      }
+    });
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      if (options.allowInitialPush && hasLocalSavedContent()) {
+        cloudSyncIsBusy = false;
+        await pushCloudSyncData();
+        return;
+      }
+
+      setCloudSyncStatus("Cloud is empty.", "idle");
+      return;
+    }
+
+    const cloudRow = rows[0];
+    const currentData = localStorage.getItem("personalDashboard");
+
+    if (currentData) {
+      localStorage.setItem("personalDashboardBackupBeforeCloudPull", currentData);
+    }
+
+    cloudSyncSuppressPush = true;
+    replaceSavedData(cloudRow.payload);
+    saveData();
+    cloudSyncSuppressPush = false;
+    refreshAppViews();
+    cloudSyncLastPulledAt = cloudRow.updated_at || new Date().toISOString();
+    setCloudSyncStatus("Pulled from cloud.", "connected");
+  } finally {
+    cloudSyncSuppressPush = false;
+    cloudSyncIsBusy = false;
+  }
+}
+
+function scheduleCloudSyncPush() {
+  if (cloudSyncSuppressPush) {
+    return;
+  }
+
+  window.clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = window.setTimeout(() => {
+    const settings = readCloudSyncSettings();
+    const session = readCloudSyncSession();
+
+    if (!settings.url || !settings.anonKey || !session?.access_token) {
+      return;
+    }
+
+    pushCloudSyncData().catch((error) => {
+      setCloudSyncStatus(error.message, "error");
+    });
+  }, 1200);
+}
+
+function initializeCloudSync() {
+  fillCloudSyncForm();
+
+  const session = readCloudSyncSession();
+
+  if (session?.access_token) {
+    setCloudSyncStatus("Signed in. Auto sync ready.", "connected");
+    pullCloudSyncData({ allowInitialPush: true }).catch((error) => {
+      setCloudSyncStatus(error.message, "error");
+    });
+    return;
+  }
+
+  setCloudSyncStatus("Not connected", "idle");
+}
+
+function maybePullCloudSyncOnFocus() {
+  const settings = readCloudSyncSettings();
+  const session = readCloudSyncSession();
+
+  if (!settings.url || !settings.anonKey || !session?.access_token || cloudSyncIsBusy) {
+    return;
+  }
+
+  const now = Date.now();
+
+  if (now - cloudSyncLastCheckedAt < 30000) {
+    return;
+  }
+
+  cloudSyncLastCheckedAt = now;
+  pullCloudSyncData({ allowInitialPush: true }).catch((error) => {
+    setCloudSyncStatus(error.message, "error");
+  });
 }
 
 function normalizeSavedData(data) {
@@ -3089,6 +3469,14 @@ document.addEventListener("click", (event) => {
   closeDatePicker();
 });
 
+window.addEventListener("focus", maybePullCloudSyncOnFocus);
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    maybePullCloudSyncOnFocus();
+  }
+});
+
 foodSlotInputs.forEach((input) => {
   input.addEventListener("change", () => {
     persistCurrentObservationDraft();
@@ -3144,6 +3532,57 @@ backupFileInput.addEventListener("change", () => {
   }
 
   backupFileInput.value = "";
+});
+
+cloudSyncSaveSettingsButton.addEventListener("click", () => {
+  try {
+    const settings = getCloudSyncSettingsFromInputs();
+    saveCloudSyncSettings(settings);
+    validateCloudSyncSettings(settings);
+    setCloudSyncStatus("Settings saved.", "idle");
+  } catch (error) {
+    setCloudSyncStatus(error.message, "error");
+  }
+});
+
+cloudSyncSignUpButton.addEventListener("click", () => {
+  signUpCloudSync().catch((error) => {
+    setCloudSyncStatus(error.message, "error");
+  });
+});
+
+cloudSyncSignInButton.addEventListener("click", () => {
+  signInCloudSync().catch((error) => {
+    setCloudSyncStatus(error.message, "error");
+  });
+});
+
+cloudSyncPullButton.addEventListener("click", () => {
+  pullCloudSyncData().catch((error) => {
+    setCloudSyncStatus(error.message, "error");
+  });
+});
+
+cloudSyncPushButton.addEventListener("click", () => {
+  pushCloudSyncData().catch((error) => {
+    setCloudSyncStatus(error.message, "error");
+  });
+});
+
+cloudSyncDisconnectButton.addEventListener("click", () => {
+  localStorage.removeItem(cloudSyncSessionKey);
+  setCloudSyncStatus("Disconnected", "idle");
+});
+
+cloudSyncCopySqlButton.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(cloudSyncSqlText);
+    setCloudSyncStatus("SQL copied.", "idle");
+  } catch (error) {
+    cloudSyncSql.select();
+    document.execCommand("copy");
+    setCloudSyncStatus("SQL copied.", "idle");
+  }
 });
 
 observationForm.addEventListener("submit", (event) => {
@@ -3206,3 +3645,4 @@ renderFoundation2();
 renderObservationHistory();
 renderCalendar();
 initializeBackupFolder();
+initializeCloudSync();

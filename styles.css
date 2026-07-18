@@ -130,6 +130,12 @@ button:hover {
   border-color: #cbd5e1;
 }
 
+.cloud-sync-button {
+  color: #1e3a8a;
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
 #backupFileInput {
   display: none;
 }
@@ -824,6 +830,116 @@ select:focus {
 .foundation2-card.dragging {
   opacity: 0.5;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+
+.cloud-sync-panel {
+  display: grid;
+  gap: 14px;
+  max-width: 980px;
+  padding: 18px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+}
+
+.cloud-sync-status-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cloud-sync-status-row strong {
+  color: #111827;
+  font-size: 18px;
+}
+
+#cloudSyncStatus {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+#cloudSyncStatus[data-state="connected"] {
+  color: #15803d;
+}
+
+#cloudSyncStatus[data-state="syncing"] {
+  color: #1d4ed8;
+}
+
+#cloudSyncStatus[data-state="error"] {
+  color: #b91c1c;
+}
+
+.cloud-sync-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cloud-sync-grid label {
+  display: grid;
+  gap: 5px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cloud-sync-grid input,
+.cloud-sync-setup textarea {
+  min-width: 0;
+  width: 100%;
+  padding: 9px 10px;
+  color: #1f2937;
+  font-size: 13px;
+  font-family: inherit;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.cloud-sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cloud-sync-actions button,
+.cloud-sync-setup button {
+  min-height: 34px;
+  padding: 8px 12px;
+  color: #1e3a8a;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+}
+
+.cloud-sync-actions button:last-child {
+  color: #7f1d1d;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.cloud-sync-setup {
+  padding-top: 4px;
+}
+
+.cloud-sync-setup summary {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cloud-sync-setup textarea {
+  min-height: 190px;
+  margin: 10px 0 8px;
+  color: #334155;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  resize: vertical;
 }
 
 .entry-card,
@@ -2287,9 +2403,14 @@ li {
   .details,
   .input-row,
   .history-card dl,
-  .observation-layout {
+  .observation-layout,
+  .cloud-sync-grid {
     grid-template-columns: 1fr;
     justify-content: stretch;
+  }
+
+  .cloud-sync-panel {
+    max-width: none;
   }
 
   .observation-main {

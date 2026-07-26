@@ -643,11 +643,11 @@ async function getValidCloudSyncSession(options = {}) {
 
   if (!session?.access_token) {
     if (options.allowPasswordSignIn) {
-      setCloudSyncStatus("Signing in...", "syncing");
+      setCloudSyncStatus("Signing in, then syncing...", "syncing");
       return createCloudSyncSessionFromInputs();
     }
 
-    throw new Error("Sign in to Cloud Sync first.");
+    throw new Error("Enter email/password, then press Sign in or sync again.");
   }
 
   if (Number(session.expires_at || 0) > Math.floor(Date.now() / 1000) + 60) {
@@ -3570,12 +3570,14 @@ cloudSyncSignInButton.addEventListener("click", () => {
 });
 
 cloudSyncPullButton.addEventListener("click", () => {
+  setCloudSyncStatus("Signing in, then pulling...", "syncing");
   pullCloudSyncData().catch((error) => {
     setCloudSyncStatus(error.message, "error");
   });
 });
 
 cloudSyncPushButton.addEventListener("click", () => {
+  setCloudSyncStatus("Signing in, then pushing...", "syncing");
   pushCloudSyncData().catch((error) => {
     setCloudSyncStatus(error.message, "error");
   });

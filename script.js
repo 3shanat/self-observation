@@ -317,6 +317,7 @@ const defaultCloudSyncKey = "sb_publishable_1oNocQA5OZm-hhbLotswUw_7E-bZQc-";
 const cloudSyncSettingsKey = "selfObservationCloudSyncSettings";
 const cloudSyncSessionKey = "selfObservationCloudSyncSession";
 const cloudSyncTableName = "self_observation_sync";
+const cloudSyncRequestTimeoutMs = 20000;
 const cloudSyncSqlText = `create table if not exists public.self_observation_sync (
   user_id uuid primary key references auth.users(id) on delete cascade,
   payload jsonb not null,
@@ -572,6 +573,12 @@ function hasLocalSavedContent() {
 async function cloudSyncFetch(path, options = {}) {
   const settings = readCloudSyncSettings();
   validateCloudSyncSettings(settings);
+  const controller = typeof AbortController === "function"
+    ? new AbortController()
+    : null;
+  const timeoutId = controller
+    ? window.setTimeout(() => controller.abort(), cloudSyncRequestTimeoutMs)
+    : 0;
 
   const headers = {
     apikey: settings.anonKey,
@@ -583,11 +590,26 @@ async function cloudSyncFetch(path, options = {}) {
     headers.Authorization = `Bearer ${options.token}`;
   }
 
-  const response = await fetch(`${settings.url}${path}`, {
-    method: options.method || "GET",
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined
-  });
+  let response;
+
+  try {
+    response = await fetch(`${settings.url}${path}`, {
+      method: options.method || "GET",
+      headers,
+      signal: controller?.signal,
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error("Cloud Sync timed out. Check internet, then try again.");
+    }
+
+    throw error;
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
 
   const text = await response.text();
   const payload = text ? JSON.parse(text) : null;
@@ -3564,7 +3586,10 @@ cloudSyncSignUpButton.addEventListener("click", () => {
 });
 
 cloudSyncSignInButton.addEventListener("click", () => {
+  cloudSyncIsBusy = false;
+  setCloudSyncStatus("Signing in...", "syncing");
   signInCloudSync().catch((error) => {
+    cloudSyncIsBusy = false;
     setCloudSyncStatus(error.message, "error");
   });
 });
@@ -3584,6 +3609,8 @@ cloudSyncPushButton.addEventListener("click", () => {
 });
 
 cloudSyncDisconnectButton.addEventListener("click", () => {
+  cloudSyncIsBusy = false;
+  window.clearTimeout(cloudSyncTimer);
   localStorage.removeItem(cloudSyncSessionKey);
   setCloudSyncStatus("Disconnected", "idle");
 });

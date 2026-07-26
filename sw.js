@@ -1,12 +1,12 @@
-const CACHE_NAME = "self-observation-v160";
+const CACHE_NAME = "self-observation-v161";
 
 const LOCAL_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=160",
-  "./script.js?v=160",
-  "./manifest.webmanifest?v=160",
-  "./assets/SelfObservationAppIcon1024.png?v=160",
+  "./styles.css?v=161",
+  "./script.js?v=161",
+  "./manifest.webmanifest?v=161",
+  "./assets/SelfObservationAppIcon1024.png?v=161",
   "./assets/fruits/durian.png?v=2",
   "./assets/fruits/grapefruit.png?v=2",
   "./assets/fruits/jackfruit.png?v=2",

@@ -616,10 +616,37 @@ async function refreshCloudSyncSession(session) {
   return readCloudSyncSession();
 }
 
-async function getValidCloudSyncSession() {
+async function createCloudSyncSessionFromInputs() {
+  const settings = getCloudSyncSettingsFromInputs();
+  const password = cloudSyncPasswordInput.value;
+  saveCloudSyncSettings(settings);
+  validateCloudSyncSettings(settings);
+
+  if (!settings.email || !password) {
+    throw new Error("Add email and password, then sign in.");
+  }
+
+  const session = await cloudSyncFetch("/auth/v1/token?grant_type=password", {
+    method: "POST",
+    body: {
+      email: settings.email,
+      password
+    }
+  });
+
+  saveCloudSyncSession(session);
+  return readCloudSyncSession();
+}
+
+async function getValidCloudSyncSession(options = {}) {
   const session = readCloudSyncSession();
 
   if (!session?.access_token) {
+    if (options.allowPasswordSignIn) {
+      setCloudSyncStatus("Signing in...", "syncing");
+      return createCloudSyncSessionFromInputs();
+    }
+
     throw new Error("Sign in to Cloud Sync first.");
   }
 
@@ -659,24 +686,7 @@ async function signUpCloudSync() {
 }
 
 async function signInCloudSync() {
-  const settings = getCloudSyncSettingsFromInputs();
-  const password = cloudSyncPasswordInput.value;
-  saveCloudSyncSettings(settings);
-  validateCloudSyncSettings(settings);
-
-  if (!settings.email || !password) {
-    throw new Error("Add email and password.");
-  }
-
-  const session = await cloudSyncFetch("/auth/v1/token?grant_type=password", {
-    method: "POST",
-    body: {
-      email: settings.email,
-      password
-    }
-  });
-
-  saveCloudSyncSession(session);
+  await createCloudSyncSessionFromInputs();
   setCloudSyncStatus("Signed in. Checking cloud...", "connected");
   await pullCloudSyncData({ allowInitialPush: true });
 }
@@ -690,7 +700,7 @@ async function pushCloudSyncData() {
   setCloudSyncStatus("Pushing to cloud...", "syncing");
 
   try {
-    const session = await getValidCloudSyncSession();
+    const session = await getValidCloudSyncSession({ allowPasswordSignIn: true });
     const payload = normalizeSavedData(savedData);
     const updatedAt = new Date().toISOString();
 
@@ -723,7 +733,7 @@ async function pullCloudSyncData(options = {}) {
   setCloudSyncStatus("Pulling from cloud...", "syncing");
 
   try {
-    const session = await getValidCloudSyncSession();
+    const session = await getValidCloudSyncSession({ allowPasswordSignIn: true });
     const userId = encodeURIComponent(session.user?.id || "");
     const rows = await cloudSyncFetch(`/rest/v1/${cloudSyncTableName}?select=payload,updated_at&user_id=eq.${userId}&limit=1`, {
       token: session.access_token,

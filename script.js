@@ -326,14 +326,17 @@ const cloudSyncSqlText = `create table if not exists public.self_observation_syn
 
 alter table public.self_observation_sync enable row level security;
 
+drop policy if exists "Users can read their own sync data" on public.self_observation_sync;
 create policy "Users can read their own sync data"
 on public.self_observation_sync for select
 using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert their own sync data" on public.self_observation_sync;
 create policy "Users can insert their own sync data"
 on public.self_observation_sync for insert
 with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update their own sync data" on public.self_observation_sync;
 create policy "Users can update their own sync data"
 on public.self_observation_sync for update
 using (auth.uid() = user_id)

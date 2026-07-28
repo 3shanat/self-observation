@@ -2930,7 +2930,8 @@ function focusSelectedMindMapNode() {
   }
 
   editor.focus();
-  editor.select();
+  const textLength = editor.value.length;
+  editor.setSelectionRange(textLength, textLength);
 }
 
 async function deleteSelectedMindMapNode() {

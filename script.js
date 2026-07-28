@@ -358,8 +358,8 @@ const foundationSlotWidth = 300;
 const foundationSlotHeight = 96;
 const mindMapNodeWidth = 220;
 const mindMapNodeHeight = 82;
-const mindMapNodeMinWidth = 150;
-const mindMapNodeMinHeight = 62;
+const mindMapNodeMinWidth = 70;
+const mindMapNodeMinHeight = 38;
 const mindMapNodeMaxWidth = 420;
 const mindMapNodeMaxHeight = 260;
 const mindMapBoardMinWidth = 1180;
@@ -2593,12 +2593,6 @@ function applyMindMapNodeStyle(nodeElement, node) {
 
 function selectMindMapNode(id, shouldRender = true) {
   savedData.mindMap.selectedId = id;
-  const selectedNode = getMindMapNode(id);
-
-  if (selectedNode) {
-    mindMapInput.value = selectedNode.text;
-  }
-
   saveData();
 
   if (shouldRender) {
@@ -2922,18 +2916,21 @@ function addMindMapNode(parentId = "") {
   renderMindMap();
 }
 
-function updateSelectedMindMapNode() {
+function focusSelectedMindMapNode() {
   const selectedNode = getMindMapNode(savedData.mindMap.selectedId);
-  const text = mindMapInput.value.trim();
 
-  if (!selectedNode || text === "") {
+  if (!selectedNode) {
     return;
   }
 
-  selectedNode.text = text;
-  selectedNode.updated = new Date().toLocaleString();
-  saveData();
-  renderMindMap();
+  const editor = mindMapNodeLayer.querySelector(`.mind-map-node[data-node-id="${selectedNode.id}"] .mind-map-node-editor`);
+
+  if (!editor) {
+    return;
+  }
+
+  editor.focus();
+  editor.select();
 }
 
 async function deleteSelectedMindMapNode() {
@@ -4234,7 +4231,7 @@ mindMapAddChildButton.addEventListener("click", () => {
 });
 
 mindMapUpdateButton.addEventListener("click", () => {
-  updateSelectedMindMapNode();
+  focusSelectedMindMapNode();
 });
 
 mindMapDeleteButton.addEventListener("click", () => {

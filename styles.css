@@ -956,8 +956,9 @@ select:focus {
 .mind-map-node {
   position: absolute;
   width: 220px;
+  height: 82px;
   min-height: 82px;
-  padding: 12px 14px;
+  padding: 10px 12px 18px;
   color: #1f2937;
   background: white;
   border: 1px solid #dbe3ef;
@@ -966,6 +967,7 @@ select:focus {
   cursor: grab;
   user-select: none;
   touch-action: none;
+  overflow: hidden;
 }
 
 .mind-map-node.selected {
@@ -973,19 +975,68 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.22), 0 14px 26px rgba(15, 23, 42, 0.08);
 }
 
-.mind-map-node.dragging {
+.mind-map-node.dragging,
+.mind-map-node.resizing {
   z-index: 4;
   opacity: 0.82;
+}
+
+.mind-map-node.dragging {
   cursor: grabbing;
 }
 
-.mind-map-node p {
-  margin: 0;
+.mind-map-node.resizing {
+  cursor: nwse-resize;
+}
+
+.mind-map-node-editor {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  color: inherit;
   font-size: 14px;
   font-weight: 750;
+  font-family: inherit;
   line-height: 1.35;
+  resize: none;
+  background: transparent;
+  border: 0;
+  outline: none;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  overflow: auto;
+  scrollbar-color: rgba(100, 116, 139, 0.26) transparent;
+  scrollbar-width: thin;
+}
+
+.mind-map-node-editor::-webkit-scrollbar {
+  width: 4px;
+}
+
+.mind-map-node-editor::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mind-map-node-editor::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.22);
+  border-radius: 999px;
+}
+
+.mind-map-resize-handle {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background:
+    linear-gradient(135deg, transparent 0 45%, rgba(100, 116, 139, 0.42) 45% 55%, transparent 55% 100%),
+    linear-gradient(135deg, transparent 0 62%, rgba(100, 116, 139, 0.28) 62% 72%, transparent 72% 100%);
+  border: 0;
+  border-radius: 4px;
+  cursor: nwse-resize;
 }
 
 .cloud-sync-panel {

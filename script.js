@@ -335,6 +335,10 @@ const foundationSlotWidth = 300;
 const foundationSlotHeight = 96;
 const mindMapNodeWidth = 220;
 const mindMapNodeHeight = 82;
+const mindMapNodeMinWidth = 150;
+const mindMapNodeMinHeight = 62;
+const mindMapNodeMaxWidth = 420;
+const mindMapNodeMaxHeight = 260;
 const mindMapBoardMinWidth = 1180;
 const mindMapBoardMinHeight = 720;
 const foundationCardGap = 14;
@@ -2290,6 +2294,8 @@ function normalizeMindMapNode(node, index = 0) {
     color: getFoundationPaletteItem(safeNode.color).name,
     x: Number.isFinite(Number(safeNode.x)) ? Number(safeNode.x) : fallbackX,
     y: Number.isFinite(Number(safeNode.y)) ? Number(safeNode.y) : fallbackY,
+    width: Number.isFinite(Number(safeNode.width)) ? Number(safeNode.width) : mindMapNodeWidth,
+    height: Number.isFinite(Number(safeNode.height)) ? Number(safeNode.height) : mindMapNodeHeight,
     date: String(safeNode.date || new Date().toLocaleString()),
     updated: String(safeNode.updated || safeNode.date || new Date().toLocaleString())
   };
@@ -2365,8 +2371,10 @@ function getMindMapRootPosition() {
 }
 
 function clampMindMapNodePosition(node) {
-  node.x = Math.max(20, Math.min(node.x, mindMapBoardMinWidth - mindMapNodeWidth - 20));
-  node.y = Math.max(20, Math.min(node.y, mindMapBoardMinHeight - mindMapNodeHeight - 20));
+  node.width = Math.max(mindMapNodeMinWidth, Math.min(Number(node.width) || mindMapNodeWidth, mindMapNodeMaxWidth));
+  node.height = Math.max(mindMapNodeMinHeight, Math.min(Number(node.height) || mindMapNodeHeight, mindMapNodeMaxHeight));
+  node.x = Math.max(20, Math.min(node.x, mindMapBoardMinWidth - node.width - 20));
+  node.y = Math.max(20, Math.min(node.y, mindMapBoardMinHeight - node.height - 20));
 }
 
 function applyMindMapNodeStyle(nodeElement, node) {
@@ -2406,10 +2414,10 @@ function drawMindMapLines() {
     }
 
     const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    const startX = parent.x + mindMapNodeWidth;
-    const startY = parent.y + mindMapNodeHeight / 2;
+    const startX = parent.x + parent.width;
+    const startY = parent.y + parent.height / 2;
     const endX = node.x;
-    const endY = node.y + mindMapNodeHeight / 2;
+    const endY = node.y + node.height / 2;
     const curve = Math.max(70, Math.abs(endX - startX) / 2);
 
     line.setAttribute("d", `M ${startX} ${startY} C ${startX + curve} ${startY}, ${endX - curve} ${endY}, ${endX} ${endY}`);
@@ -2460,7 +2468,7 @@ function startMindMapDrag(event, nodeElement, nodeId) {
 }
 
 function moveMindMapDrag(event) {
-  if (!activeMindMapDrag) {
+  if (!activeMindMapDrag || activeMindMapDrag.type === "resize") {
     return;
   }
 
@@ -2482,7 +2490,7 @@ function moveMindMapDrag(event) {
 }
 
 function stopMindMapDrag() {
-  if (!activeMindMapDrag) {
+  if (!activeMindMapDrag || activeMindMapDrag.type === "resize") {
     return;
   }
 
@@ -2493,6 +2501,87 @@ function stopMindMapDrag() {
   document.removeEventListener("pointercancel", stopMindMapDrag);
 
   if (node && activeMindMapDrag.didMove) {
+    node.x = Math.round(node.x);
+    node.y = Math.round(node.y);
+    node.updated = new Date().toLocaleString();
+    saveData();
+  }
+
+  activeMindMapDrag = null;
+}
+
+function startMindMapResize(event, nodeElement, nodeId) {
+  if (event.button !== undefined && event.button !== 0) {
+    return;
+  }
+
+  const node = getMindMapNode(nodeId);
+
+  if (!node) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  selectMindMapNode(nodeId, false);
+  mindMapNodeLayer.querySelectorAll(".mind-map-node.selected").forEach((selectedElement) => {
+    selectedElement.classList.remove("selected");
+  });
+  nodeElement.classList.add("selected", "resizing");
+  renderMindMapColorRow();
+
+  activeMindMapDrag = {
+    type: "resize",
+    nodeId,
+    nodeElement,
+    startX: event.clientX,
+    startY: event.clientY,
+    originalWidth: node.width,
+    originalHeight: node.height,
+    didMove: false
+  };
+
+  document.addEventListener("pointermove", moveMindMapResize);
+  document.addEventListener("pointerup", stopMindMapResize);
+  document.addEventListener("pointercancel", stopMindMapResize);
+}
+
+function moveMindMapResize(event) {
+  if (!activeMindMapDrag || activeMindMapDrag.type !== "resize") {
+    return;
+  }
+
+  const node = getMindMapNode(activeMindMapDrag.nodeId);
+
+  if (!node) {
+    return;
+  }
+
+  node.width = activeMindMapDrag.originalWidth + event.clientX - activeMindMapDrag.startX;
+  node.height = activeMindMapDrag.originalHeight + event.clientY - activeMindMapDrag.startY;
+  clampMindMapNodePosition(node);
+  activeMindMapDrag.nodeElement.style.width = `${node.width}px`;
+  activeMindMapDrag.nodeElement.style.height = `${node.height}px`;
+  activeMindMapDrag.nodeElement.style.left = `${node.x}px`;
+  activeMindMapDrag.nodeElement.style.top = `${node.y}px`;
+  activeMindMapDrag.didMove = true;
+  drawMindMapLines();
+}
+
+function stopMindMapResize() {
+  if (!activeMindMapDrag || activeMindMapDrag.type !== "resize") {
+    return;
+  }
+
+  const node = getMindMapNode(activeMindMapDrag.nodeId);
+  activeMindMapDrag.nodeElement.classList.remove("resizing");
+  document.removeEventListener("pointermove", moveMindMapResize);
+  document.removeEventListener("pointerup", stopMindMapResize);
+  document.removeEventListener("pointercancel", stopMindMapResize);
+
+  if (node && activeMindMapDrag.didMove) {
+    node.width = Math.round(node.width);
+    node.height = Math.round(node.height);
     node.x = Math.round(node.x);
     node.y = Math.round(node.y);
     node.updated = new Date().toLocaleString();
@@ -2540,18 +2629,44 @@ function renderMindMap() {
   savedData.mindMap.nodes.forEach((node) => {
     clampMindMapNodePosition(node);
     const nodeElement = document.createElement("article");
-    const content = document.createElement("p");
+    const editor = document.createElement("textarea");
+    const resizeHandle = document.createElement("button");
     nodeElement.className = "mind-map-node";
     nodeElement.classList.toggle("selected", node.id === savedData.mindMap.selectedId);
     nodeElement.style.left = `${node.x}px`;
     nodeElement.style.top = `${node.y}px`;
+    nodeElement.style.width = `${node.width}px`;
+    nodeElement.style.height = `${node.height}px`;
     nodeElement.dataset.nodeId = node.id;
     applyMindMapNodeStyle(nodeElement, node);
-    content.textContent = node.text;
+    editor.className = "mind-map-node-editor";
+    editor.value = node.text;
+    editor.setAttribute("aria-label", "Mind map note");
+    resizeHandle.className = "mind-map-resize-handle";
+    resizeHandle.type = "button";
+    resizeHandle.setAttribute("aria-label", "Resize note");
+
+    editor.addEventListener("focus", () => selectMindMapNode(node.id, false));
+    editor.addEventListener("change", () => {
+      const nextText = editor.value.trim();
+
+      if (nextText === "") {
+        editor.value = node.text;
+        return;
+      }
+
+      node.text = nextText;
+      node.updated = new Date().toLocaleString();
+      mindMapInput.value = nextText;
+      saveData();
+      drawMindMapLines();
+    });
+
+    resizeHandle.addEventListener("pointerdown", (event) => startMindMapResize(event, nodeElement, node.id));
 
     nodeElement.addEventListener("click", () => selectMindMapNode(node.id));
     nodeElement.addEventListener("pointerdown", (event) => startMindMapDrag(event, nodeElement, node.id));
-    nodeElement.append(content);
+    nodeElement.append(editor, resizeHandle);
     mindMapNodeLayer.append(nodeElement);
   });
 
@@ -2586,6 +2701,8 @@ function addMindMapNode(parentId = "") {
     color: parentNode ? "white" : "blue",
     x: position.x,
     y: position.y,
+    width: mindMapNodeWidth,
+    height: mindMapNodeHeight,
     date: new Date().toLocaleString()
   };
 

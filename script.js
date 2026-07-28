@@ -41,6 +41,7 @@ const mindMapInput = document.querySelector("#mindMapInput");
 const mindMapAddRootButton = document.querySelector("#mindMapAddRootButton");
 const mindMapAddChildButton = document.querySelector("#mindMapAddChildButton");
 const mindMapUpdateButton = document.querySelector("#mindMapUpdateButton");
+const mindMapFlipLinkButton = document.querySelector("#mindMapFlipLinkButton");
 const mindMapDeleteButton = document.querySelector("#mindMapDeleteButton");
 const mindMapColorRow = document.querySelector("#mindMapColorRow");
 const mindMapBoard = document.querySelector("#mindMapBoard");
@@ -343,6 +344,7 @@ let foundation2Mode = "view";
 let activeFoundationDrag = null;
 let activeFoundation2Drag = null;
 let activeMindMapDrag = null;
+let lastDeletedMindMapBranch = null;
 const observationDrafts = {};
 
 const foundationPalette = [
@@ -364,6 +366,12 @@ const mindMapNodeMaxWidth = 420;
 const mindMapNodeMaxHeight = 260;
 const mindMapBoardMinWidth = 1180;
 const mindMapBoardMinHeight = 720;
+const mindMapLinkLayouts = [
+  { parentAnchor: "right", nodeAnchor: "left" },
+  { parentAnchor: "left", nodeAnchor: "right" },
+  { parentAnchor: "bottom", nodeAnchor: "top" },
+  { parentAnchor: "top", nodeAnchor: "bottom" }
+];
 const foundationCardGap = 14;
 const backupDatabaseName = "selfObservationBackup";
 const backupDatabaseStore = "handles";
@@ -2504,6 +2512,12 @@ function normalizeMindMapNode(node, index = 0) {
     y: Number.isFinite(Number(safeNode.y)) ? Number(safeNode.y) : fallbackY,
     width: Number.isFinite(Number(safeNode.width)) ? Number(safeNode.width) : mindMapNodeWidth,
     height: Number.isFinite(Number(safeNode.height)) ? Number(safeNode.height) : mindMapNodeHeight,
+    parentAnchor: mindMapLinkLayouts.some((layout) => layout.parentAnchor === safeNode.parentAnchor)
+      ? safeNode.parentAnchor
+      : "right",
+    nodeAnchor: mindMapLinkLayouts.some((layout) => layout.nodeAnchor === safeNode.nodeAnchor)
+      ? safeNode.nodeAnchor
+      : "left",
     date: String(safeNode.date || new Date().toLocaleString()),
     updated: String(safeNode.updated || safeNode.date || new Date().toLocaleString())
   };
@@ -2610,7 +2624,48 @@ function markMindMapNodeSelected(nodeElement, nodeId) {
   renderMindMapColorRow();
   mindMapAddChildButton.disabled = false;
   mindMapUpdateButton.disabled = false;
+  mindMapFlipLinkButton.disabled = !getMindMapNode(nodeId)?.parentId;
   mindMapDeleteButton.disabled = false;
+}
+
+function getMindMapAnchorPoint(node, side) {
+  const anchor = {
+    left: { x: node.x, y: node.y + node.height / 2 },
+    right: { x: node.x + node.width, y: node.y + node.height / 2 },
+    top: { x: node.x + node.width / 2, y: node.y },
+    bottom: { x: node.x + node.width / 2, y: node.y + node.height }
+  };
+
+  return anchor[side] || anchor.right;
+}
+
+function getMindMapAnchorVector(side) {
+  return {
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 },
+    top: { x: 0, y: -1 },
+    bottom: { x: 0, y: 1 }
+  }[side] || { x: 1, y: 0 };
+}
+
+function getMindMapLinePath(parent, node) {
+  const parentSide = node.parentAnchor || "right";
+  const nodeSide = node.nodeAnchor || "left";
+  const start = getMindMapAnchorPoint(parent, parentSide);
+  const end = getMindMapAnchorPoint(node, nodeSide);
+  const startVector = getMindMapAnchorVector(parentSide);
+  const endVector = getMindMapAnchorVector(nodeSide);
+  const distance = Math.max(60, Math.hypot(end.x - start.x, end.y - start.y) / 2);
+  const firstControl = {
+    x: start.x + startVector.x * distance,
+    y: start.y + startVector.y * distance
+  };
+  const secondControl = {
+    x: end.x + endVector.x * distance,
+    y: end.y + endVector.y * distance
+  };
+
+  return `M ${start.x} ${start.y} C ${firstControl.x} ${firstControl.y}, ${secondControl.x} ${secondControl.y}, ${end.x} ${end.y}`;
 }
 
 function drawMindMapLines() {
@@ -2629,13 +2684,7 @@ function drawMindMapLines() {
     }
 
     const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    const startX = parent.x + parent.width;
-    const startY = parent.y + parent.height / 2;
-    const endX = node.x;
-    const endY = node.y + node.height / 2;
-    const curve = Math.max(70, Math.abs(endX - startX) / 2);
-
-    line.setAttribute("d", `M ${startX} ${startY} C ${startX + curve} ${startY}, ${endX - curve} ${endY}, ${endX} ${endY}`);
+    line.setAttribute("d", getMindMapLinePath(parent, node));
     line.setAttribute("class", "mind-map-line");
     mindMapLines.append(line);
   });
@@ -2888,6 +2937,7 @@ function renderMindMap() {
   const selectedNode = getMindMapNode(savedData.mindMap.selectedId);
   mindMapAddChildButton.disabled = !selectedNode;
   mindMapUpdateButton.disabled = !selectedNode;
+  mindMapFlipLinkButton.disabled = !selectedNode || !selectedNode.parentId;
   mindMapDeleteButton.disabled = !selectedNode;
 
   if (!selectedNode && savedData.mindMap.nodes.length === 0 && mindMapInput.value.trim() === "") {
@@ -2915,6 +2965,8 @@ function addMindMapNode(parentId = "") {
     y: position.y,
     width: mindMapNodeWidth,
     height: mindMapNodeHeight,
+    parentAnchor: "right",
+    nodeAnchor: "left",
     date: new Date().toLocaleString()
   };
 
@@ -2924,6 +2976,25 @@ function addMindMapNode(parentId = "") {
   mindMapInput.value = "";
   saveData();
   renderMindMap();
+}
+
+function cycleSelectedMindMapLink() {
+  const selectedNode = getMindMapNode(savedData.mindMap.selectedId);
+
+  if (!selectedNode || !selectedNode.parentId) {
+    return;
+  }
+
+  const currentIndex = mindMapLinkLayouts.findIndex((layout) => (
+    layout.parentAnchor === selectedNode.parentAnchor
+    && layout.nodeAnchor === selectedNode.nodeAnchor
+  ));
+  const nextLayout = mindMapLinkLayouts[(currentIndex + 1) % mindMapLinkLayouts.length];
+  selectedNode.parentAnchor = nextLayout.parentAnchor;
+  selectedNode.nodeAnchor = nextLayout.nodeAnchor;
+  selectedNode.updated = new Date().toLocaleString();
+  saveData();
+  drawMindMapLines();
 }
 
 function focusSelectedMindMapNode() {
@@ -2955,8 +3026,8 @@ async function deleteSelectedMindMapNode() {
   const shouldDelete = await askForConfirmation({
     title: "Delete branch?",
     message: subtreeIds.size > 1
-      ? `${selectedNode.text}\n\nThis will delete ${subtreeIds.size} connected notes.`
-      : selectedNode.text,
+      ? `${selectedNode.text}\n\nThis will delete ${subtreeIds.size} connected notes. Press Ctrl+Z after deletion to restore.`
+      : `${selectedNode.text}\n\nPress Ctrl+Z after deletion to restore.`,
     confirmText: "Delete"
   });
 
@@ -2964,11 +3035,57 @@ async function deleteSelectedMindMapNode() {
     return;
   }
 
+  const deletedNodes = savedData.mindMap.nodes
+    .filter((node) => subtreeIds.has(node.id))
+    .map((node) => ({ ...node }));
+  const insertIndex = savedData.mindMap.nodes.findIndex((node) => node.id === selectedNode.id);
+  lastDeletedMindMapBranch = {
+    nodes: deletedNodes,
+    selectedId: selectedNode.id,
+    insertIndex
+  };
   savedData.mindMap.nodes = savedData.mindMap.nodes.filter((node) => !subtreeIds.has(node.id));
   savedData.mindMap.selectedId = "";
   mindMapInput.value = "";
   saveData();
   renderMindMap();
+}
+
+function restoreLastDeletedMindMapBranch() {
+  if (!lastDeletedMindMapBranch) {
+    return false;
+  }
+
+  const existingIds = new Set(savedData.mindMap.nodes.map((node) => node.id));
+  const nodesToRestore = lastDeletedMindMapBranch.nodes.filter((node) => !existingIds.has(node.id));
+
+  if (nodesToRestore.length === 0) {
+    lastDeletedMindMapBranch = null;
+    return false;
+  }
+
+  const insertIndex = Math.max(
+    0,
+    Math.min(lastDeletedMindMapBranch.insertIndex, savedData.mindMap.nodes.length)
+  );
+  savedData.mindMap.nodes.splice(insertIndex, 0, ...nodesToRestore);
+  savedData.mindMap.selectedId = lastDeletedMindMapBranch.selectedId;
+  lastDeletedMindMapBranch = null;
+  saveData();
+  renderMindMap();
+  return true;
+}
+
+function handleMindMapUndo(event) {
+  const isUndo = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z";
+
+  if (!isUndo || !document.querySelector("#mindMap.active")) {
+    return;
+  }
+
+  if (restoreLastDeletedMindMapBranch()) {
+    event.preventDefault();
+  }
 }
 
 function getTodayDate() {
@@ -4245,6 +4362,10 @@ mindMapUpdateButton.addEventListener("click", () => {
   focusSelectedMindMapNode();
 });
 
+mindMapFlipLinkButton.addEventListener("click", () => {
+  cycleSelectedMindMapLink();
+});
+
 mindMapDeleteButton.addEventListener("click", () => {
   deleteSelectedMindMapNode();
 });
@@ -4260,6 +4381,8 @@ mindMapInput.addEventListener("keydown", (event) => {
     }
   }
 });
+
+document.addEventListener("keydown", handleMindMapUndo);
 
 setObservationDateValue(getTodayDate());
 setActiveFoodSlot(getCurrentFoodSlot());

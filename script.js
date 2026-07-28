@@ -2600,6 +2600,19 @@ function selectMindMapNode(id, shouldRender = true) {
   }
 }
 
+function markMindMapNodeSelected(nodeElement, nodeId) {
+  savedData.mindMap.selectedId = nodeId;
+  mindMapNodeLayer.querySelectorAll(".mind-map-node.selected").forEach((selectedElement) => {
+    selectedElement.classList.remove("selected");
+  });
+  nodeElement.classList.add("selected");
+  saveData();
+  renderMindMapColorRow();
+  mindMapAddChildButton.disabled = false;
+  mindMapUpdateButton.disabled = false;
+  mindMapDeleteButton.disabled = false;
+}
+
 function drawMindMapLines() {
   mindMapLines.innerHTML = "";
   mindMapLines.setAttribute("viewBox", `0 0 ${mindMapBoardMinWidth} ${mindMapBoardMinHeight}`);
@@ -2644,12 +2657,7 @@ function startMindMapDrag(event, nodeElement, nodeId) {
   }
 
   event.preventDefault();
-  selectMindMapNode(nodeId, false);
-  mindMapNodeLayer.querySelectorAll(".mind-map-node.selected").forEach((selectedElement) => {
-    selectedElement.classList.remove("selected");
-  });
-  nodeElement.classList.add("selected");
-  renderMindMapColorRow();
+  markMindMapNodeSelected(nodeElement, nodeId);
   const boardRect = mindMapBoard.getBoundingClientRect();
   activeMindMapDrag = {
     nodeId,
@@ -2725,12 +2733,8 @@ function startMindMapResize(event, nodeElement, nodeId) {
 
   event.preventDefault();
   event.stopPropagation();
-  selectMindMapNode(nodeId, false);
-  mindMapNodeLayer.querySelectorAll(".mind-map-node.selected").forEach((selectedElement) => {
-    selectedElement.classList.remove("selected");
-  });
-  nodeElement.classList.add("selected", "resizing");
-  renderMindMapColorRow();
+  markMindMapNodeSelected(nodeElement, nodeId);
+  nodeElement.classList.add("resizing");
 
   activeMindMapDrag = {
     type: "resize",
@@ -2848,7 +2852,14 @@ function renderMindMap() {
     resizeHandle.type = "button";
     resizeHandle.setAttribute("aria-label", "Resize note");
 
-    editor.addEventListener("focus", () => selectMindMapNode(node.id, false));
+    editor.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+      markMindMapNodeSelected(nodeElement, node.id);
+    });
+    editor.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+    editor.addEventListener("focus", () => markMindMapNodeSelected(nodeElement, node.id));
     editor.addEventListener("change", () => {
       const nextText = editor.value.trim();
 
@@ -2859,7 +2870,6 @@ function renderMindMap() {
 
       node.text = nextText;
       node.updated = new Date().toLocaleString();
-      mindMapInput.value = nextText;
       saveData();
       drawMindMapLines();
     });

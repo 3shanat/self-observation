@@ -29,6 +29,15 @@ const foundation2ColumnSelect = document.querySelector("#foundation2ColumnSelect
 const foundation2Lists = document.querySelectorAll(".foundation2-list");
 const foundation2EditModeButton = document.querySelector("#foundation2EditModeButton");
 const foundation2DeleteModeButton = document.querySelector("#foundation2DeleteModeButton");
+const mindMapInput = document.querySelector("#mindMapInput");
+const mindMapAddRootButton = document.querySelector("#mindMapAddRootButton");
+const mindMapAddChildButton = document.querySelector("#mindMapAddChildButton");
+const mindMapUpdateButton = document.querySelector("#mindMapUpdateButton");
+const mindMapDeleteButton = document.querySelector("#mindMapDeleteButton");
+const mindMapColorRow = document.querySelector("#mindMapColorRow");
+const mindMapBoard = document.querySelector("#mindMapBoard");
+const mindMapLines = document.querySelector("#mindMapLines");
+const mindMapNodeLayer = document.querySelector("#mindMapNodeLayer");
 
 const observationForm = document.querySelector("#observationForm");
 const observationDate = document.querySelector("#observationDate");
@@ -228,6 +237,10 @@ const emptySavedData = {
     main: "",
     columns: [[], [], []]
   },
+  mindMap: {
+    selectedId: "",
+    nodes: []
+  },
   documents: [],
   observations: {}
 };
@@ -284,6 +297,17 @@ savedData.foundation2.columns = [0, 1, 2].map((index) => (
   Array.isArray(savedData.foundation2.columns[index]) ? savedData.foundation2.columns[index] : []
 ));
 
+if (!savedData.mindMap || typeof savedData.mindMap !== "object" || Array.isArray(savedData.mindMap)) {
+  savedData.mindMap = {
+    selectedId: "",
+    nodes: []
+  };
+}
+
+if (!Array.isArray(savedData.mindMap.nodes)) {
+  savedData.mindMap.nodes = [];
+}
+
 let visibleCalendarDate = new Date();
 let visibleDatePickerDate = new Date();
 let backupDirectoryHandle = null;
@@ -295,6 +319,7 @@ let foundationMode = "view";
 let foundation2Mode = "view";
 let activeFoundationDrag = null;
 let activeFoundation2Drag = null;
+let activeMindMapDrag = null;
 const observationDrafts = {};
 
 const foundationPalette = [
@@ -308,6 +333,10 @@ const foundationPalette = [
 ];
 const foundationSlotWidth = 300;
 const foundationSlotHeight = 96;
+const mindMapNodeWidth = 220;
+const mindMapNodeHeight = 82;
+const mindMapBoardMinWidth = 1180;
+const mindMapBoardMinHeight = 720;
 const foundationCardGap = 14;
 const backupDatabaseName = "selfObservationBackup";
 const backupDatabaseStore = "handles";
@@ -569,6 +598,7 @@ function hasLocalSavedContent() {
     || normalized.foundations.length > 0
     || normalized.foundation2.main.trim() !== ""
     || normalized.foundation2.columns.some((column) => column.length > 0)
+    || normalized.mindMap.nodes.length > 0
     || normalized.documents.length > 0
     || Object.keys(normalized.observations).length > 0;
 }
@@ -866,6 +896,11 @@ function normalizeSavedData(data) {
   const foundation2Columns = Array.isArray(normalizedFoundation2.columns)
     ? normalizedFoundation2.columns
     : [];
+  const normalizedMindMap = normalizedData.mindMap
+    && typeof normalizedData.mindMap === "object"
+    && !Array.isArray(normalizedData.mindMap)
+      ? normalizedData.mindMap
+      : {};
 
   return {
     diary: Array.isArray(normalizedData.diary) ? normalizedData.diary : [],
@@ -877,6 +912,10 @@ function normalizeSavedData(data) {
       columns: [0, 1, 2].map((index) => (
         Array.isArray(foundation2Columns[index]) ? foundation2Columns[index] : []
       ))
+    },
+    mindMap: {
+      selectedId: String(normalizedMindMap.selectedId || ""),
+      nodes: Array.isArray(normalizedMindMap.nodes) ? normalizedMindMap.nodes : []
     },
     documents: Array.isArray(normalizedData.documents) ? normalizedData.documents : [],
     observations: normalizedData.observations
@@ -903,6 +942,7 @@ function refreshAppViews() {
   renderTasks();
   renderFoundations();
   renderFoundation2();
+  renderMindMap();
   loadObservation(getObservationDateValue());
   renderObservationHistory();
   renderCalendar();
@@ -2228,6 +2268,376 @@ function renderFoundation2() {
   });
 }
 
+function createMindMapId() {
+  return `mind-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function getMindMapNode(id) {
+  return savedData.mindMap.nodes.find((node) => node.id === id) || null;
+}
+
+function normalizeMindMapNode(node, index = 0) {
+  const safeNode = node && typeof node === "object"
+    ? node
+    : { text: String(node || "") };
+  const fallbackX = 90 + (index % 4) * 250;
+  const fallbackY = 90 + Math.floor(index / 4) * 140;
+
+  return {
+    id: String(safeNode.id || createMindMapId()),
+    parentId: safeNode.parentId ? String(safeNode.parentId) : "",
+    text: String(safeNode.text || "New idea"),
+    color: getFoundationPaletteItem(safeNode.color).name,
+    x: Number.isFinite(Number(safeNode.x)) ? Number(safeNode.x) : fallbackX,
+    y: Number.isFinite(Number(safeNode.y)) ? Number(safeNode.y) : fallbackY,
+    date: String(safeNode.date || new Date().toLocaleString()),
+    updated: String(safeNode.updated || safeNode.date || new Date().toLocaleString())
+  };
+}
+
+function normalizeMindMapData() {
+  const seenIds = new Set();
+  savedData.mindMap.nodes = savedData.mindMap.nodes.map((node, index) => {
+    const normalizedNode = normalizeMindMapNode(node, index);
+
+    while (seenIds.has(normalizedNode.id)) {
+      normalizedNode.id = createMindMapId();
+    }
+
+    seenIds.add(normalizedNode.id);
+    return normalizedNode;
+  });
+
+  const ids = new Set(savedData.mindMap.nodes.map((node) => node.id));
+  savedData.mindMap.nodes.forEach((node) => {
+    if (node.parentId && !ids.has(node.parentId)) {
+      node.parentId = "";
+    }
+  });
+
+  if (savedData.mindMap.selectedId && !ids.has(savedData.mindMap.selectedId)) {
+    savedData.mindMap.selectedId = "";
+  }
+}
+
+function getMindMapSubtreeIds(rootId) {
+  const ids = new Set([rootId]);
+  let didAdd = true;
+
+  while (didAdd) {
+    didAdd = false;
+    savedData.mindMap.nodes.forEach((node) => {
+      if (node.parentId && ids.has(node.parentId) && !ids.has(node.id)) {
+        ids.add(node.id);
+        didAdd = true;
+      }
+    });
+  }
+
+  return ids;
+}
+
+function getMindMapChildPosition(parentNode) {
+  const childCount = savedData.mindMap.nodes.filter((node) => node.parentId === parentNode.id).length;
+  const direction = childCount % 2 === 0 ? 1 : -1;
+  const row = Math.floor(childCount / 2);
+
+  return {
+    x: parentNode.x + 260,
+    y: parentNode.y + direction * (110 + row * 105)
+  };
+}
+
+function getMindMapRootPosition() {
+  const rootCount = savedData.mindMap.nodes.filter((node) => !node.parentId).length;
+
+  if (rootCount === 0) {
+    return {
+      x: Math.round((mindMapBoardMinWidth - mindMapNodeWidth) / 2),
+      y: 110
+    };
+  }
+
+  return {
+    x: 80 + (rootCount % 4) * 260,
+    y: 120 + Math.floor(rootCount / 4) * 150
+  };
+}
+
+function clampMindMapNodePosition(node) {
+  node.x = Math.max(20, Math.min(node.x, mindMapBoardMinWidth - mindMapNodeWidth - 20));
+  node.y = Math.max(20, Math.min(node.y, mindMapBoardMinHeight - mindMapNodeHeight - 20));
+}
+
+function applyMindMapNodeStyle(nodeElement, node) {
+  const color = getFoundationPaletteItem(node.color);
+  nodeElement.style.background = color.background;
+  nodeElement.style.borderColor = color.border;
+}
+
+function selectMindMapNode(id, shouldRender = true) {
+  savedData.mindMap.selectedId = id;
+  const selectedNode = getMindMapNode(id);
+
+  if (selectedNode) {
+    mindMapInput.value = selectedNode.text;
+  }
+
+  saveData();
+
+  if (shouldRender) {
+    renderMindMap();
+  }
+}
+
+function drawMindMapLines() {
+  mindMapLines.innerHTML = "";
+  mindMapLines.setAttribute("viewBox", `0 0 ${mindMapBoardMinWidth} ${mindMapBoardMinHeight}`);
+
+  savedData.mindMap.nodes.forEach((node) => {
+    if (!node.parentId) {
+      return;
+    }
+
+    const parent = getMindMapNode(node.parentId);
+
+    if (!parent) {
+      return;
+    }
+
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const startX = parent.x + mindMapNodeWidth;
+    const startY = parent.y + mindMapNodeHeight / 2;
+    const endX = node.x;
+    const endY = node.y + mindMapNodeHeight / 2;
+    const curve = Math.max(70, Math.abs(endX - startX) / 2);
+
+    line.setAttribute("d", `M ${startX} ${startY} C ${startX + curve} ${startY}, ${endX - curve} ${endY}, ${endX} ${endY}`);
+    line.setAttribute("class", "mind-map-line");
+    mindMapLines.append(line);
+  });
+}
+
+function startMindMapDrag(event, nodeElement, nodeId) {
+  if (event.button !== undefined && event.button !== 0) {
+    return;
+  }
+
+  if (event.target.closest("textarea, button")) {
+    return;
+  }
+
+  const node = getMindMapNode(nodeId);
+
+  if (!node) {
+    return;
+  }
+
+  event.preventDefault();
+  selectMindMapNode(nodeId, false);
+  mindMapNodeLayer.querySelectorAll(".mind-map-node.selected").forEach((selectedElement) => {
+    selectedElement.classList.remove("selected");
+  });
+  nodeElement.classList.add("selected");
+  renderMindMapColorRow();
+  const boardRect = mindMapBoard.getBoundingClientRect();
+  activeMindMapDrag = {
+    nodeId,
+    nodeElement,
+    startX: event.clientX,
+    startY: event.clientY,
+    originalX: node.x,
+    originalY: node.y,
+    boardLeft: boardRect.left,
+    boardTop: boardRect.top,
+    didMove: false
+  };
+
+  nodeElement.classList.add("dragging");
+  document.addEventListener("pointermove", moveMindMapDrag);
+  document.addEventListener("pointerup", stopMindMapDrag);
+  document.addEventListener("pointercancel", stopMindMapDrag);
+}
+
+function moveMindMapDrag(event) {
+  if (!activeMindMapDrag) {
+    return;
+  }
+
+  const node = getMindMapNode(activeMindMapDrag.nodeId);
+
+  if (!node) {
+    return;
+  }
+
+  const nextX = activeMindMapDrag.originalX + event.clientX - activeMindMapDrag.startX;
+  const nextY = activeMindMapDrag.originalY + event.clientY - activeMindMapDrag.startY;
+  node.x = nextX;
+  node.y = nextY;
+  clampMindMapNodePosition(node);
+  activeMindMapDrag.nodeElement.style.left = `${node.x}px`;
+  activeMindMapDrag.nodeElement.style.top = `${node.y}px`;
+  activeMindMapDrag.didMove = true;
+  drawMindMapLines();
+}
+
+function stopMindMapDrag() {
+  if (!activeMindMapDrag) {
+    return;
+  }
+
+  const node = getMindMapNode(activeMindMapDrag.nodeId);
+  activeMindMapDrag.nodeElement.classList.remove("dragging");
+  document.removeEventListener("pointermove", moveMindMapDrag);
+  document.removeEventListener("pointerup", stopMindMapDrag);
+  document.removeEventListener("pointercancel", stopMindMapDrag);
+
+  if (node && activeMindMapDrag.didMove) {
+    node.x = Math.round(node.x);
+    node.y = Math.round(node.y);
+    node.updated = new Date().toLocaleString();
+    saveData();
+  }
+
+  activeMindMapDrag = null;
+}
+
+function renderMindMapColorRow() {
+  mindMapColorRow.innerHTML = "";
+  const selectedNode = getMindMapNode(savedData.mindMap.selectedId);
+
+  foundationPalette.forEach((paletteItem) => {
+    const colorButton = document.createElement("button");
+    colorButton.className = "foundation-color-button";
+    colorButton.type = "button";
+    colorButton.title = paletteItem.name;
+    colorButton.style.background = paletteItem.background;
+    colorButton.style.borderColor = paletteItem.border;
+    colorButton.disabled = !selectedNode;
+    colorButton.classList.toggle("active", selectedNode?.color === paletteItem.name);
+
+    colorButton.addEventListener("click", () => {
+      if (!selectedNode) {
+        return;
+      }
+
+      selectedNode.color = paletteItem.name;
+      selectedNode.updated = new Date().toLocaleString();
+      saveData();
+      renderMindMap();
+    });
+
+    mindMapColorRow.append(colorButton);
+  });
+}
+
+function renderMindMap() {
+  normalizeMindMapData();
+  mindMapNodeLayer.innerHTML = "";
+  mindMapBoard.style.width = `${mindMapBoardMinWidth}px`;
+  mindMapBoard.style.height = `${mindMapBoardMinHeight}px`;
+
+  savedData.mindMap.nodes.forEach((node) => {
+    clampMindMapNodePosition(node);
+    const nodeElement = document.createElement("article");
+    const content = document.createElement("p");
+    nodeElement.className = "mind-map-node";
+    nodeElement.classList.toggle("selected", node.id === savedData.mindMap.selectedId);
+    nodeElement.style.left = `${node.x}px`;
+    nodeElement.style.top = `${node.y}px`;
+    nodeElement.dataset.nodeId = node.id;
+    applyMindMapNodeStyle(nodeElement, node);
+    content.textContent = node.text;
+
+    nodeElement.addEventListener("click", () => selectMindMapNode(node.id));
+    nodeElement.addEventListener("pointerdown", (event) => startMindMapDrag(event, nodeElement, node.id));
+    nodeElement.append(content);
+    mindMapNodeLayer.append(nodeElement);
+  });
+
+  drawMindMapLines();
+  renderMindMapColorRow();
+
+  const selectedNode = getMindMapNode(savedData.mindMap.selectedId);
+  mindMapAddChildButton.disabled = !selectedNode;
+  mindMapUpdateButton.disabled = !selectedNode;
+  mindMapDeleteButton.disabled = !selectedNode;
+
+  if (!selectedNode && savedData.mindMap.nodes.length === 0 && mindMapInput.value.trim() === "") {
+    mindMapInput.placeholder = "Write the central idea...";
+  } else {
+    mindMapInput.placeholder = "Central idea or next branch...";
+  }
+}
+
+function addMindMapNode(parentId = "") {
+  const text = mindMapInput.value.trim();
+
+  if (text === "") {
+    return;
+  }
+
+  const parentNode = parentId ? getMindMapNode(parentId) : null;
+  const position = parentNode ? getMindMapChildPosition(parentNode) : getMindMapRootPosition();
+  const node = {
+    id: createMindMapId(),
+    parentId: parentNode?.id || "",
+    text,
+    color: parentNode ? "white" : "blue",
+    x: position.x,
+    y: position.y,
+    date: new Date().toLocaleString()
+  };
+
+  clampMindMapNodePosition(node);
+  savedData.mindMap.nodes.push(node);
+  savedData.mindMap.selectedId = node.id;
+  mindMapInput.value = "";
+  saveData();
+  renderMindMap();
+}
+
+function updateSelectedMindMapNode() {
+  const selectedNode = getMindMapNode(savedData.mindMap.selectedId);
+  const text = mindMapInput.value.trim();
+
+  if (!selectedNode || text === "") {
+    return;
+  }
+
+  selectedNode.text = text;
+  selectedNode.updated = new Date().toLocaleString();
+  saveData();
+  renderMindMap();
+}
+
+async function deleteSelectedMindMapNode() {
+  const selectedNode = getMindMapNode(savedData.mindMap.selectedId);
+
+  if (!selectedNode) {
+    return;
+  }
+
+  const subtreeIds = getMindMapSubtreeIds(selectedNode.id);
+  const shouldDelete = await askForConfirmation({
+    title: "Delete branch?",
+    message: subtreeIds.size > 1
+      ? `${selectedNode.text}\n\nThis will delete ${subtreeIds.size} connected notes.`
+      : selectedNode.text,
+    confirmText: "Delete"
+  });
+
+  if (!shouldDelete) {
+    return;
+  }
+
+  savedData.mindMap.nodes = savedData.mindMap.nodes.filter((node) => !subtreeIds.has(node.id));
+  savedData.mindMap.selectedId = "";
+  mindMapInput.value = "";
+  saveData();
+  renderMindMap();
+}
+
 function getTodayDate() {
   return formatDateKey(new Date());
 }
@@ -3467,6 +3877,34 @@ foundation2DeleteModeButton.addEventListener("click", () => {
   renderFoundation2();
 });
 
+mindMapAddRootButton.addEventListener("click", () => {
+  addMindMapNode("");
+});
+
+mindMapAddChildButton.addEventListener("click", () => {
+  addMindMapNode(savedData.mindMap.selectedId);
+});
+
+mindMapUpdateButton.addEventListener("click", () => {
+  updateSelectedMindMapNode();
+});
+
+mindMapDeleteButton.addEventListener("click", () => {
+  deleteSelectedMindMapNode();
+});
+
+mindMapInput.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+    event.preventDefault();
+
+    if (savedData.mindMap.selectedId) {
+      addMindMapNode(savedData.mindMap.selectedId);
+    } else {
+      addMindMapNode("");
+    }
+  }
+});
+
 setObservationDateValue(getTodayDate());
 setActiveFoodSlot(getCurrentFoodSlot());
 createScoreButtons();
@@ -3683,10 +4121,11 @@ renderEntries(savedData.diary, diaryList, "diary");
 renderEntries(savedData.complaints, complaintsList, "complaints");
 renderDocuments();
 renderBasicFolder();
-renderTasks();
-renderFoundations();
-renderFoundation2();
-renderObservationHistory();
+  renderTasks();
+  renderFoundations();
+  renderFoundation2();
+  renderMindMap();
+  renderObservationHistory();
 renderCalendar();
 initializeBackupFolder();
 initializeCloudSync();

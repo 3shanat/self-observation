@@ -11,10 +11,10 @@
   <meta name="apple-mobile-web-app-title" content="Self-Observation">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Self-Observation</title>
-  <link rel="manifest" href="manifest.webmanifest?v=164">
-  <link rel="apple-touch-icon" href="assets/SelfObservationAppIcon1024.png?v=164">
-  <link rel="icon" href="assets/SelfObservationAppIcon1024.png?v=164">
-  <link rel="stylesheet" href="styles.css?v=164">
+  <link rel="manifest" href="manifest.webmanifest?v=165">
+  <link rel="apple-touch-icon" href="assets/SelfObservationAppIcon1024.png?v=165">
+  <link rel="icon" href="assets/SelfObservationAppIcon1024.png?v=165">
+  <link rel="stylesheet" href="styles.css?v=165">
 </head>
 <body>
   <main class="page">
@@ -22,6 +22,7 @@
       <button class="section-button active" data-section="observation" type="button">Self-Observation</button>
       <button class="section-button" data-section="calendar" type="button">Calendar</button>
       <button class="section-button" data-section="foundation2" type="button">Biocoding</button>
+      <button class="section-button" data-section="mindMap" type="button">Mind Map</button>
       <button class="section-button backup-folder-button" id="chooseBackupFolderButton" type="button">Choose folder</button>
       <button class="section-button import-backup-button" id="importBackupButton" type="button">Import backup</button>
       <button class="section-button cloud-sync-button" data-section="cloudSync" type="button">Cloud Sync</button>
@@ -142,6 +143,27 @@
             <div class="foundation2-column">
               <h3>Habits</h3>
               <div class="foundation2-list" data-column="2"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="app-section" id="mindMap">
+        <div class="mind-map-panel">
+          <div class="mind-map-toolbar">
+            <textarea id="mindMapInput" rows="2" placeholder="Central idea or next branch..."></textarea>
+            <div class="mind-map-actions">
+              <button id="mindMapAddRootButton" type="button">Add center</button>
+              <button id="mindMapAddChildButton" type="button">Add child</button>
+              <button id="mindMapUpdateButton" type="button">Update</button>
+              <button id="mindMapDeleteButton" type="button">Delete</button>
+            </div>
+            <div class="mind-map-color-row" id="mindMapColorRow" aria-label="Mind map colors"></div>
+          </div>
+          <div class="mind-map-board-wrap">
+            <div class="mind-map-board" id="mindMapBoard">
+              <svg class="mind-map-lines" id="mindMapLines" aria-hidden="true"></svg>
+              <div class="mind-map-node-layer" id="mindMapNodeLayer"></div>
             </div>
           </div>
         </div>
@@ -325,11 +347,11 @@
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="script.js?v=164"></script>
+  <script src="script.js?v=165"></script>
   <script>
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("sw.js?v=164").catch(() => {});
+        navigator.serviceWorker.register("sw.js?v=165").catch(() => {});
       });
     }
   </script>

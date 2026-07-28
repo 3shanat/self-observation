@@ -832,6 +832,162 @@ select:focus {
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
 }
 
+.mind-map-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-height: 660px;
+  padding: 18px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+}
+
+.mind-map-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.mind-map-toolbar textarea {
+  width: 100%;
+  height: 54px;
+  min-height: 54px;
+  padding: 10px 12px;
+  color: #1f2937;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.3;
+  resize: vertical;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.mind-map-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mind-map-actions button {
+  height: 34px;
+  padding: 0 12px;
+  color: #1e3a8a;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+}
+
+.mind-map-actions button:disabled {
+  color: #94a3b8;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  cursor: default;
+}
+
+.mind-map-actions button:last-child {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.mind-map-color-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 170px;
+}
+
+.mind-map-board-wrap {
+  min-height: 0;
+  overflow: auto;
+  background:
+    linear-gradient(rgba(148, 163, 184, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.09) 1px, transparent 1px),
+    #fbfdff;
+  background-size: 28px 28px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  scrollbar-color: rgba(100, 116, 139, 0.32) transparent;
+  scrollbar-width: thin;
+}
+
+.mind-map-board-wrap::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.mind-map-board-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mind-map-board-wrap::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.28);
+  border-radius: 999px;
+}
+
+.mind-map-board {
+  position: relative;
+  min-width: 100%;
+  min-height: 620px;
+}
+
+.mind-map-lines,
+.mind-map-node-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.mind-map-lines {
+  pointer-events: none;
+}
+
+.mind-map-line {
+  fill: none;
+  stroke: rgba(100, 116, 139, 0.42);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.mind-map-node {
+  position: absolute;
+  width: 220px;
+  min-height: 82px;
+  padding: 12px 14px;
+  color: #1f2937;
+  background: white;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.07);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.mind-map-node.selected {
+  border-color: #60a5fa !important;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.22), 0 14px 26px rgba(15, 23, 42, 0.08);
+}
+
+.mind-map-node.dragging {
+  z-index: 4;
+  opacity: 0.82;
+  cursor: grabbing;
+}
+
+.mind-map-node p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .cloud-sync-panel {
   display: grid;
   gap: 14px;
@@ -2967,6 +3123,30 @@ li {
   .foundation2-list {
     height: 340px;
     min-height: 260px;
+  }
+
+  .mind-map-panel {
+    min-height: 640px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .mind-map-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .mind-map-actions,
+  .mind-map-color-row {
+    justify-content: flex-start;
+  }
+
+  .mind-map-actions button {
+    flex: 1 1 120px;
+  }
+
+  .mind-map-board-wrap {
+    max-height: 64vh;
+    border-radius: 14px;
   }
 
 }

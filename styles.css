@@ -832,6 +832,196 @@ select:focus {
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
 }
 
+.renote-workspace {
+  display: grid;
+  grid-template-columns: minmax(190px, 260px) minmax(0, 1fr);
+  gap: 12px;
+  min-height: 680px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+}
+
+.renote-sidebar,
+.renote-editor-panel {
+  min-height: 0;
+  background: white;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+}
+
+.renote-sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px;
+}
+
+.renote-sidebar > button {
+  height: 34px;
+  color: #1e3a8a;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+}
+
+.renote-note-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-color: rgba(100, 116, 139, 0.28) transparent;
+  scrollbar-width: thin;
+}
+
+.renote-note-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.renote-note-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.renote-note-list::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.24);
+  border-radius: 999px;
+}
+
+.renote-note-button {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 10px;
+  color: #334155;
+  text-align: left;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.renote-note-button.active {
+  color: #0f172a;
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.renote-note-button strong,
+.renote-note-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.renote-note-button strong {
+  font-size: 13px;
+}
+
+.renote-note-button span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.renote-editor-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+}
+
+.renote-title-input {
+  height: 42px;
+  padding: 8px 10px;
+  color: #111827;
+  font-size: 20px;
+  font-weight: 800;
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+}
+
+.renote-toolbar {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.renote-toolbar button {
+  height: 30px;
+  min-width: 34px;
+  padding: 0 10px;
+  color: #1e3a8a;
+  font-size: 12px;
+  font-weight: 800;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+}
+
+.renote-toolbar button:disabled {
+  color: #94a3b8;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.renote-toolbar button:last-child {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.renote-editor {
+  min-height: 0;
+  padding: 18px;
+  color: #1f2937;
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  outline: none;
+  scrollbar-color: rgba(100, 116, 139, 0.28) transparent;
+  scrollbar-width: thin;
+}
+
+.renote-editor:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.14);
+}
+
+.renote-editor::-webkit-scrollbar {
+  width: 7px;
+}
+
+.renote-editor::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.renote-editor::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.24);
+  border-radius: 999px;
+}
+
+.renote-editor h2 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.renote-editor p,
+.renote-editor ul,
+.renote-editor ol {
+  margin: 0 0 12px;
+}
+
+.renote-empty {
+  color: #94a3b8;
+}
+
 .mind-map-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -3174,6 +3364,31 @@ li {
   .foundation2-list {
     height: 340px;
     min-height: 260px;
+  }
+
+  .renote-workspace {
+    grid-template-columns: 1fr;
+    min-height: 680px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .renote-sidebar,
+  .renote-editor-panel,
+  .renote-editor {
+    border-radius: 14px;
+  }
+
+  .renote-note-list {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(180px, 230px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0 4px;
+  }
+
+  .renote-editor-panel {
+    min-height: 520px;
   }
 
   .mind-map-panel {

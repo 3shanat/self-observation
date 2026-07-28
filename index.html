@@ -11,10 +11,10 @@
   <meta name="apple-mobile-web-app-title" content="Self-Observation">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Self-Observation</title>
-  <link rel="manifest" href="manifest.webmanifest?v=166">
-  <link rel="apple-touch-icon" href="assets/SelfObservationAppIcon1024.png?v=166">
-  <link rel="icon" href="assets/SelfObservationAppIcon1024.png?v=166">
-  <link rel="stylesheet" href="styles.css?v=166">
+  <link rel="manifest" href="manifest.webmanifest?v=167">
+  <link rel="apple-touch-icon" href="assets/SelfObservationAppIcon1024.png?v=167">
+  <link rel="icon" href="assets/SelfObservationAppIcon1024.png?v=167">
+  <link rel="stylesheet" href="styles.css?v=167">
 </head>
 <body>
   <main class="page">
@@ -22,6 +22,7 @@
       <button class="section-button active" data-section="observation" type="button">Self-Observation</button>
       <button class="section-button" data-section="calendar" type="button">Calendar</button>
       <button class="section-button" data-section="foundation2" type="button">Biocoding</button>
+      <button class="section-button" data-section="renote" type="button">Renote</button>
       <button class="section-button" data-section="mindMap" type="button">Mind Map</button>
       <button class="section-button backup-folder-button" id="chooseBackupFolderButton" type="button">Choose folder</button>
       <button class="section-button import-backup-button" id="importBackupButton" type="button">Import backup</button>
@@ -145,6 +146,30 @@
               <div class="foundation2-list" data-column="2"></div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="app-section" id="renote">
+        <div class="renote-workspace">
+          <aside class="renote-sidebar">
+            <button id="renoteNewButton" type="button">New note</button>
+            <div class="renote-note-list" id="renoteNoteList"></div>
+          </aside>
+          <section class="renote-editor-panel">
+            <input id="renoteTitleInput" class="renote-title-input" type="text" placeholder="Untitled note">
+            <div class="renote-toolbar" aria-label="Renote tools">
+              <button data-renote-command="bold" type="button">B</button>
+              <button data-renote-command="italic" type="button">I</button>
+              <button data-renote-command="underline" type="button">U</button>
+              <button data-renote-command="insertUnorderedList" type="button">List</button>
+              <button data-renote-command="formatBlock" data-renote-value="h2" type="button">H2</button>
+              <button data-renote-command="formatBlock" data-renote-value="p" type="button">P</button>
+              <button id="renoteHighlightButton" type="button">Mark</button>
+              <button id="renoteClearButton" type="button">Clear</button>
+              <button id="renoteDeleteButton" type="button">Delete</button>
+            </div>
+            <div id="renoteEditor" class="renote-editor" contenteditable="true" aria-label="Renote editor"></div>
+          </section>
         </div>
       </section>
 
@@ -347,11 +372,11 @@
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="script.js?v=166"></script>
+  <script src="script.js?v=167"></script>
   <script>
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("sw.js?v=166").catch(() => {});
+        navigator.serviceWorker.register("sw.js?v=167").catch(() => {});
       });
     }
   </script>

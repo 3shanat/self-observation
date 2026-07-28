@@ -29,6 +29,14 @@ const foundation2ColumnSelect = document.querySelector("#foundation2ColumnSelect
 const foundation2Lists = document.querySelectorAll(".foundation2-list");
 const foundation2EditModeButton = document.querySelector("#foundation2EditModeButton");
 const foundation2DeleteModeButton = document.querySelector("#foundation2DeleteModeButton");
+const renoteNewButton = document.querySelector("#renoteNewButton");
+const renoteNoteList = document.querySelector("#renoteNoteList");
+const renoteTitleInput = document.querySelector("#renoteTitleInput");
+const renoteToolbarButtons = document.querySelectorAll("[data-renote-command]");
+const renoteHighlightButton = document.querySelector("#renoteHighlightButton");
+const renoteClearButton = document.querySelector("#renoteClearButton");
+const renoteDeleteButton = document.querySelector("#renoteDeleteButton");
+const renoteEditor = document.querySelector("#renoteEditor");
 const mindMapInput = document.querySelector("#mindMapInput");
 const mindMapAddRootButton = document.querySelector("#mindMapAddRootButton");
 const mindMapAddChildButton = document.querySelector("#mindMapAddChildButton");
@@ -237,6 +245,10 @@ const emptySavedData = {
     main: "",
     columns: [[], [], []]
   },
+  renote: {
+    activeId: "",
+    notes: []
+  },
   mindMap: {
     selectedId: "",
     nodes: []
@@ -296,6 +308,17 @@ if (!Array.isArray(savedData.foundation2.columns)) {
 savedData.foundation2.columns = [0, 1, 2].map((index) => (
   Array.isArray(savedData.foundation2.columns[index]) ? savedData.foundation2.columns[index] : []
 ));
+
+if (!savedData.renote || typeof savedData.renote !== "object" || Array.isArray(savedData.renote)) {
+  savedData.renote = {
+    activeId: "",
+    notes: []
+  };
+}
+
+if (!Array.isArray(savedData.renote.notes)) {
+  savedData.renote.notes = [];
+}
 
 if (!savedData.mindMap || typeof savedData.mindMap !== "object" || Array.isArray(savedData.mindMap)) {
   savedData.mindMap = {
@@ -602,6 +625,7 @@ function hasLocalSavedContent() {
     || normalized.foundations.length > 0
     || normalized.foundation2.main.trim() !== ""
     || normalized.foundation2.columns.some((column) => column.length > 0)
+    || normalized.renote.notes.length > 0
     || normalized.mindMap.nodes.length > 0
     || normalized.documents.length > 0
     || Object.keys(normalized.observations).length > 0;
@@ -905,6 +929,11 @@ function normalizeSavedData(data) {
     && !Array.isArray(normalizedData.mindMap)
       ? normalizedData.mindMap
       : {};
+  const normalizedRenote = normalizedData.renote
+    && typeof normalizedData.renote === "object"
+    && !Array.isArray(normalizedData.renote)
+      ? normalizedData.renote
+      : {};
 
   return {
     diary: Array.isArray(normalizedData.diary) ? normalizedData.diary : [],
@@ -916,6 +945,10 @@ function normalizeSavedData(data) {
       columns: [0, 1, 2].map((index) => (
         Array.isArray(foundation2Columns[index]) ? foundation2Columns[index] : []
       ))
+    },
+    renote: {
+      activeId: String(normalizedRenote.activeId || ""),
+      notes: Array.isArray(normalizedRenote.notes) ? normalizedRenote.notes : []
     },
     mindMap: {
       selectedId: String(normalizedMindMap.selectedId || ""),
@@ -946,6 +979,7 @@ function refreshAppViews() {
   renderTasks();
   renderFoundations();
   renderFoundation2();
+  renderRenote();
   renderMindMap();
   loadObservation(getObservationDateValue());
   renderObservationHistory();
@@ -2270,6 +2304,180 @@ function renderFoundation2() {
       list.append(card);
     });
   });
+}
+
+function createRenoteId() {
+  return `renote-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeRenoteNote(note) {
+  const safeNote = note && typeof note === "object"
+    ? note
+    : { body: String(note || "") };
+
+  return {
+    id: String(safeNote.id || createRenoteId()),
+    title: String(safeNote.title || "Untitled note"),
+    body: String(safeNote.body || ""),
+    date: String(safeNote.date || new Date().toLocaleString()),
+    updated: String(safeNote.updated || safeNote.date || new Date().toLocaleString())
+  };
+}
+
+function normalizeRenoteData() {
+  const seenIds = new Set();
+  savedData.renote.notes = savedData.renote.notes.map((note) => {
+    const normalizedNote = normalizeRenoteNote(note);
+
+    while (seenIds.has(normalizedNote.id)) {
+      normalizedNote.id = createRenoteId();
+    }
+
+    seenIds.add(normalizedNote.id);
+    return normalizedNote;
+  });
+
+  if (savedData.renote.activeId && !seenIds.has(savedData.renote.activeId)) {
+    savedData.renote.activeId = "";
+  }
+}
+
+function getActiveRenoteNote() {
+  return savedData.renote.notes.find((note) => note.id === savedData.renote.activeId) || null;
+}
+
+function createRenoteNote() {
+  const note = {
+    id: createRenoteId(),
+    title: "Untitled note",
+    body: "",
+    date: new Date().toLocaleString(),
+    updated: new Date().toLocaleString()
+  };
+
+  savedData.renote.notes.unshift(note);
+  savedData.renote.activeId = note.id;
+  saveData();
+  renderRenote();
+  renoteTitleInput.focus();
+  renoteTitleInput.select();
+}
+
+function selectRenoteNote(id) {
+  savedData.renote.activeId = id;
+  saveData();
+  renderRenote();
+  renoteEditor.focus();
+}
+
+function getRenotePreview(note) {
+  const container = document.createElement("div");
+  container.innerHTML = note.body;
+  return (container.textContent || "").trim().slice(0, 110);
+}
+
+function saveActiveRenoteNote() {
+  const note = getActiveRenoteNote();
+
+  if (!note) {
+    return;
+  }
+
+  note.title = renoteTitleInput.value.trim() || "Untitled note";
+  note.body = renoteEditor.innerHTML;
+  note.updated = new Date().toLocaleString();
+  saveData();
+  renderRenoteList();
+}
+
+function renderRenoteList() {
+  normalizeRenoteData();
+  renoteNoteList.innerHTML = "";
+
+  savedData.renote.notes.forEach((note) => {
+    const button = document.createElement("button");
+    const title = document.createElement("strong");
+    const meta = document.createElement("span");
+    const preview = document.createElement("span");
+
+    button.className = "renote-note-button";
+    button.classList.toggle("active", note.id === savedData.renote.activeId);
+    button.type = "button";
+    title.textContent = note.title || "Untitled note";
+    meta.textContent = note.updated || note.date;
+    preview.textContent = getRenotePreview(note) || "Empty note";
+
+    button.addEventListener("click", () => selectRenoteNote(note.id));
+    button.append(title, preview, meta);
+    renoteNoteList.append(button);
+  });
+}
+
+function renderRenote() {
+  normalizeRenoteData();
+
+  if (!savedData.renote.activeId && savedData.renote.notes.length > 0) {
+    savedData.renote.activeId = savedData.renote.notes[0].id;
+  }
+
+  const activeNote = getActiveRenoteNote();
+  renderRenoteList();
+
+  renoteTitleInput.disabled = !activeNote;
+  renoteEditor.contentEditable = activeNote ? "true" : "false";
+  renoteDeleteButton.disabled = !activeNote;
+  renoteToolbarButtons.forEach((button) => {
+    button.disabled = !activeNote;
+  });
+  renoteHighlightButton.disabled = !activeNote;
+  renoteClearButton.disabled = !activeNote;
+
+  if (!activeNote) {
+    renoteTitleInput.value = "";
+    renoteEditor.innerHTML = '<p class="renote-empty">Create a note to start writing.</p>';
+    return;
+  }
+
+  if (renoteTitleInput.value !== activeNote.title) {
+    renoteTitleInput.value = activeNote.title;
+  }
+
+  if (renoteEditor.innerHTML !== activeNote.body) {
+    renoteEditor.innerHTML = activeNote.body || "";
+  }
+}
+
+function runRenoteCommand(command, value = null) {
+  if (!getActiveRenoteNote()) {
+    return;
+  }
+
+  renoteEditor.focus();
+  document.execCommand(command, false, value);
+  saveActiveRenoteNote();
+}
+
+async function deleteActiveRenoteNote() {
+  const activeNote = getActiveRenoteNote();
+
+  if (!activeNote) {
+    return;
+  }
+
+  const shouldDelete = await askForConfirmation({
+    title: "Delete Renote?",
+    message: activeNote.title,
+    confirmText: "Delete"
+  });
+
+  if (!shouldDelete) {
+    return;
+  }
+
+  savedData.renote.notes = savedData.renote.notes.filter((note) => note.id !== activeNote.id);
+  savedData.renote.activeId = savedData.renote.notes[0]?.id || "";
+  saveData();
+  renderRenote();
 }
 
 function createMindMapId() {
@@ -3994,6 +4202,29 @@ foundation2DeleteModeButton.addEventListener("click", () => {
   renderFoundation2();
 });
 
+renoteNewButton.addEventListener("click", createRenoteNote);
+
+renoteTitleInput.addEventListener("input", saveActiveRenoteNote);
+renoteEditor.addEventListener("input", saveActiveRenoteNote);
+
+renoteToolbarButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    runRenoteCommand(button.dataset.renoteCommand, button.dataset.renoteValue || null);
+  });
+});
+
+renoteHighlightButton.addEventListener("click", () => {
+  runRenoteCommand("backColor", "#fef3c7");
+});
+
+renoteClearButton.addEventListener("click", () => {
+  runRenoteCommand("removeFormat");
+});
+
+renoteDeleteButton.addEventListener("click", () => {
+  deleteActiveRenoteNote();
+});
+
 mindMapAddRootButton.addEventListener("click", () => {
   addMindMapNode("");
 });
@@ -4238,11 +4469,12 @@ renderEntries(savedData.diary, diaryList, "diary");
 renderEntries(savedData.complaints, complaintsList, "complaints");
 renderDocuments();
 renderBasicFolder();
-  renderTasks();
-  renderFoundations();
-  renderFoundation2();
-  renderMindMap();
-  renderObservationHistory();
+renderTasks();
+renderFoundations();
+renderFoundation2();
+renderRenote();
+renderMindMap();
+renderObservationHistory();
 renderCalendar();
 initializeBackupFolder();
 initializeCloudSync();

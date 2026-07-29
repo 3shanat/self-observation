@@ -41,6 +41,7 @@ const mindMapInput = document.querySelector("#mindMapInput");
 const mindMapAddRootButton = document.querySelector("#mindMapAddRootButton");
 const mindMapAddChildButton = document.querySelector("#mindMapAddChildButton");
 const mindMapFlipLinkButton = document.querySelector("#mindMapFlipLinkButton");
+const mindMapMoveLinkButton = document.querySelector("#mindMapMoveLinkButton");
 const mindMapDeleteButton = document.querySelector("#mindMapDeleteButton");
 const mindMapColorRow = document.querySelector("#mindMapColorRow");
 const mindMapBoard = document.querySelector("#mindMapBoard");
@@ -343,6 +344,7 @@ let foundation2Mode = "view";
 let activeFoundationDrag = null;
 let activeFoundation2Drag = null;
 let activeMindMapDrag = null;
+let activeMindMapRelinkNodeId = "";
 let lastDeletedMindMapBranch = null;
 const observationDrafts = {};
 
@@ -2623,6 +2625,7 @@ function markMindMapNodeSelected(nodeElement, nodeId) {
   renderMindMapColorRow();
   mindMapAddChildButton.disabled = false;
   mindMapFlipLinkButton.disabled = !getMindMapNode(nodeId)?.parentId;
+  mindMapMoveLinkButton.disabled = !getMindMapNode(nodeId)?.parentId;
   mindMapDeleteButton.disabled = false;
 }
 
@@ -2666,6 +2669,76 @@ function getMindMapLinePath(parent, node) {
   return `M ${start.x} ${start.y} C ${firstControl.x} ${firstControl.y}, ${secondControl.x} ${secondControl.y}, ${end.x} ${end.y}`;
 }
 
+function getMindMapDefaultLinkLayout(parent, node) {
+  const parentCenterX = parent.x + parent.width / 2;
+  const parentCenterY = parent.y + parent.height / 2;
+  const nodeCenterX = node.x + node.width / 2;
+  const nodeCenterY = node.y + node.height / 2;
+  const deltaX = nodeCenterX - parentCenterX;
+  const deltaY = nodeCenterY - parentCenterY;
+
+  if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+    return deltaX >= 0
+      ? { parentAnchor: "right", nodeAnchor: "left" }
+      : { parentAnchor: "left", nodeAnchor: "right" };
+  }
+
+  return deltaY >= 0
+    ? { parentAnchor: "bottom", nodeAnchor: "top" }
+    : { parentAnchor: "top", nodeAnchor: "bottom" };
+}
+
+function canMoveMindMapLink(nodeId, parentId) {
+  if (!nodeId || !parentId || nodeId === parentId) {
+    return false;
+  }
+
+  return !getMindMapSubtreeIds(nodeId).has(parentId);
+}
+
+function startMindMapRelink(nodeId) {
+  const node = getMindMapNode(nodeId);
+
+  if (!node || !node.parentId) {
+    return;
+  }
+
+  activeMindMapRelinkNodeId = node.id;
+  savedData.mindMap.selectedId = node.id;
+  saveData();
+  renderMindMap();
+}
+
+function cancelMindMapRelink() {
+  if (!activeMindMapRelinkNodeId) {
+    return false;
+  }
+
+  activeMindMapRelinkNodeId = "";
+  renderMindMap();
+  return true;
+}
+
+function moveMindMapLinkToParent(parentId) {
+  const node = getMindMapNode(activeMindMapRelinkNodeId);
+  const parentNode = getMindMapNode(parentId);
+
+  if (!node || !parentNode || !canMoveMindMapLink(node.id, parentNode.id)) {
+    return false;
+  }
+
+  const linkLayout = getMindMapDefaultLinkLayout(parentNode, node);
+  node.parentId = parentNode.id;
+  node.parentAnchor = linkLayout.parentAnchor;
+  node.nodeAnchor = linkLayout.nodeAnchor;
+  node.updated = new Date().toLocaleString();
+  savedData.mindMap.selectedId = node.id;
+  activeMindMapRelinkNodeId = "";
+  saveData();
+  renderMindMap();
+  return true;
+}
+
 function drawMindMapLines() {
   mindMapLines.innerHTML = "";
   mindMapLines.setAttribute("viewBox", `0 0 ${mindMapBoardMinWidth} ${mindMapBoardMinHeight}`);
@@ -2681,14 +2754,30 @@ function drawMindMapLines() {
       return;
     }
 
+    const linePath = getMindMapLinePath(parent, node);
     const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    line.setAttribute("d", getMindMapLinePath(parent, node));
+    const hitLine = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    line.setAttribute("d", linePath);
+    hitLine.setAttribute("d", linePath);
     line.setAttribute("class", "mind-map-line");
-    mindMapLines.append(line);
+    line.classList.toggle("selected", node.id === savedData.mindMap.selectedId);
+    line.classList.toggle("relinking", node.id === activeMindMapRelinkNodeId);
+    hitLine.setAttribute("class", "mind-map-line-hit");
+    hitLine.dataset.nodeId = node.id;
+    hitLine.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      startMindMapRelink(node.id);
+    });
+    mindMapLines.append(line, hitLine);
   });
 }
 
 function startMindMapDrag(event, nodeElement, nodeId) {
+  if (activeMindMapRelinkNodeId) {
+    return;
+  }
+
   if (event.button !== undefined && event.button !== 0) {
     return;
   }
@@ -2886,6 +2975,8 @@ function renderMindMap() {
     const resizeHandle = document.createElement("button");
     nodeElement.className = "mind-map-node";
     nodeElement.classList.toggle("selected", node.id === savedData.mindMap.selectedId);
+    nodeElement.classList.toggle("relinking", node.id === activeMindMapRelinkNodeId);
+    nodeElement.classList.toggle("relink-target", Boolean(activeMindMapRelinkNodeId) && canMoveMindMapLink(activeMindMapRelinkNodeId, node.id));
     nodeElement.style.left = `${node.x}px`;
     nodeElement.style.top = `${node.y}px`;
     nodeElement.style.width = `${node.width}px`;
@@ -2903,6 +2994,13 @@ function renderMindMap() {
     resizeHandle.setAttribute("aria-label", "Resize note");
 
     editor.addEventListener("pointerdown", (event) => {
+      if (activeMindMapRelinkNodeId) {
+        event.preventDefault();
+        event.stopPropagation();
+        moveMindMapLinkToParent(node.id);
+        return;
+      }
+
       event.stopPropagation();
       markMindMapNodeSelected(nodeElement, node.id);
     });
@@ -2919,7 +3017,14 @@ function renderMindMap() {
 
     resizeHandle.addEventListener("pointerdown", (event) => startMindMapResize(event, nodeElement, node.id));
 
-    nodeElement.addEventListener("click", () => selectMindMapNode(node.id));
+    nodeElement.addEventListener("click", () => {
+      if (activeMindMapRelinkNodeId) {
+        moveMindMapLinkToParent(node.id);
+        return;
+      }
+
+      selectMindMapNode(node.id);
+    });
     nodeElement.addEventListener("pointerdown", (event) => startMindMapDrag(event, nodeElement, node.id));
     nodeElement.append(editor, resizeHandle);
     mindMapNodeLayer.append(nodeElement);
@@ -2931,6 +3036,7 @@ function renderMindMap() {
   const selectedNode = getMindMapNode(savedData.mindMap.selectedId);
   mindMapAddChildButton.disabled = !selectedNode;
   mindMapFlipLinkButton.disabled = !selectedNode || !selectedNode.parentId;
+  mindMapMoveLinkButton.disabled = !selectedNode || !selectedNode.parentId;
   mindMapDeleteButton.disabled = !selectedNode;
 
   if (!selectedNode && savedData.mindMap.nodes.length === 0 && mindMapInput.value.trim() === "") {
@@ -3053,6 +3159,11 @@ function restoreLastDeletedMindMapBranch() {
 
 function handleMindMapUndo(event) {
   const isUndo = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z";
+
+  if (event.key === "Escape" && document.querySelector("#mindMap.active") && cancelMindMapRelink()) {
+    event.preventDefault();
+    return;
+  }
 
   if (!isUndo || !document.querySelector("#mindMap.active")) {
     return;
@@ -4335,6 +4446,19 @@ mindMapAddChildButton.addEventListener("click", () => {
 
 mindMapFlipLinkButton.addEventListener("click", () => {
   cycleSelectedMindMapLink();
+});
+
+mindMapMoveLinkButton.addEventListener("click", () => {
+  startMindMapRelink(savedData.mindMap.selectedId);
+});
+
+mindMapBoard.addEventListener("click", (event) => {
+  if (
+    activeMindMapRelinkNodeId
+    && [mindMapBoard, mindMapLines, mindMapNodeLayer].includes(event.target)
+  ) {
+    cancelMindMapRelink();
+  }
 });
 
 mindMapDeleteButton.addEventListener("click", () => {

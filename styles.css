@@ -1133,6 +1133,10 @@ select:focus {
 }
 
 .mind-map-lines {
+  pointer-events: auto;
+}
+
+.mind-map-node-layer {
   pointer-events: none;
 }
 
@@ -1141,6 +1145,25 @@ select:focus {
   stroke: rgba(100, 116, 139, 0.42);
   stroke-width: 2;
   stroke-linecap: round;
+  pointer-events: none;
+}
+
+.mind-map-line.selected {
+  stroke: rgba(37, 99, 235, 0.56);
+}
+
+.mind-map-line.relinking {
+  stroke: rgba(245, 158, 11, 0.72);
+  stroke-width: 3;
+}
+
+.mind-map-line-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 16;
+  stroke-linecap: round;
+  cursor: alias;
+  pointer-events: stroke;
 }
 
 .mind-map-node {
@@ -1159,11 +1182,26 @@ select:focus {
   user-select: none;
   touch-action: none;
   overflow: hidden;
+  pointer-events: auto;
 }
 
 .mind-map-node.selected {
   border-color: #60a5fa !important;
   box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.22), 0 14px 26px rgba(15, 23, 42, 0.08);
+}
+
+.mind-map-node.relinking {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.24), 0 14px 26px rgba(15, 23, 42, 0.08);
+}
+
+.mind-map-node.relink-target {
+  cursor: copy;
+}
+
+.mind-map-node.relink-target:hover {
+  border-color: #22c55e !important;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2), 0 14px 26px rgba(15, 23, 42, 0.08);
 }
 
 .mind-map-node.dragging,

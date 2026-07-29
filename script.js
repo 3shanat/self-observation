@@ -2884,7 +2884,7 @@ function renderMindMap() {
   savedData.mindMap.nodes.forEach((node) => {
     clampMindMapNodePosition(node);
     const nodeElement = document.createElement("article");
-    const editor = document.createElement("textarea");
+    const editor = document.createElement("div");
     const resizeHandle = document.createElement("button");
     nodeElement.className = "mind-map-node";
     nodeElement.classList.toggle("selected", node.id === savedData.mindMap.selectedId);
@@ -2895,8 +2895,11 @@ function renderMindMap() {
     nodeElement.dataset.nodeId = node.id;
     applyMindMapNodeStyle(nodeElement, node);
     editor.className = "mind-map-node-editor";
-    editor.value = node.text;
+    editor.textContent = node.text;
+    editor.contentEditable = "plaintext-only";
     editor.setAttribute("aria-label", "Mind map note");
+    editor.setAttribute("role", "textbox");
+    editor.setAttribute("spellcheck", "false");
     resizeHandle.className = "mind-map-resize-handle";
     resizeHandle.type = "button";
     resizeHandle.setAttribute("aria-label", "Resize note");
@@ -2909,15 +2912,8 @@ function renderMindMap() {
       event.stopPropagation();
     });
     editor.addEventListener("focus", () => markMindMapNodeSelected(nodeElement, node.id));
-    editor.addEventListener("change", () => {
-      const nextText = editor.value.trim();
-
-      if (nextText === "") {
-        editor.value = node.text;
-        return;
-      }
-
-      node.text = nextText;
+    editor.addEventListener("input", () => {
+      node.text = editor.innerText.trim();
       node.updated = new Date().toLocaleString();
       saveData();
       drawMindMapLines();
@@ -3011,8 +3007,12 @@ function focusSelectedMindMapNode() {
   }
 
   editor.focus();
-  const textLength = editor.value.length;
-  editor.setSelectionRange(textLength, textLength);
+  const range = document.createRange();
+  const selection = window.getSelection();
+  range.selectNodeContents(editor);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
 async function deleteSelectedMindMapNode() {

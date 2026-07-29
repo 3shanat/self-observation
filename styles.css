@@ -1034,6 +1034,7 @@ select:focus {
 }
 
 .mind-map-toolbar {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(260px, 1fr) auto auto;
   gap: 10px;
@@ -1093,8 +1094,12 @@ select:focus {
 }
 
 .mind-map-emoji-panel {
-  grid-column: 1 / -1;
-  max-height: 178px;
+  position: absolute;
+  top: 46px;
+  right: 0;
+  z-index: 10;
+  width: min(360px, 100%);
+  max-height: 318px;
   padding: 10px;
   overflow: auto;
   background: rgba(255, 255, 255, 0.96);
@@ -1103,6 +1108,39 @@ select:focus {
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
   scrollbar-color: rgba(100, 116, 139, 0.28) transparent;
   scrollbar-width: thin;
+}
+
+.mind-map-emoji-search {
+  position: sticky;
+  top: -10px;
+  z-index: 1;
+  display: grid;
+  gap: 4px;
+  margin: -10px -10px 8px;
+  padding: 10px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.98);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.mind-map-emoji-search input {
+  height: 30px;
+  padding: 0 10px;
+  color: #1f2937;
+  font-size: 13px;
+  font-family: inherit;
+  background: #f8fafc;
+  border: 1px solid #dbe3ef;
+  border-radius: 7px;
+  outline: none;
+}
+
+.mind-map-emoji-search input:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.28);
 }
 
 .mind-map-emoji-panel::-webkit-scrollbar {
@@ -1132,26 +1170,32 @@ select:focus {
 
 .mind-map-emoji-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
-  gap: 5px;
+  grid-template-columns: repeat(auto-fill, minmax(24px, 1fr));
+  gap: 4px;
 }
 
 .mind-map-emoji-item {
   display: grid;
   place-items: center;
-  height: 30px;
+  height: 24px;
   padding: 0;
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 7px;
+  border-radius: 6px;
   cursor: pointer;
 }
 
 .mind-map-emoji-item:hover {
   background: #eff6ff;
   border-color: #93c5fd;
+}
+
+.mind-map-emoji-empty {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .mind-map-board-wrap {
@@ -1303,6 +1347,13 @@ select:focus {
   overflow: auto;
   scrollbar-color: rgba(100, 116, 139, 0.26) transparent;
   scrollbar-width: thin;
+}
+
+.mind-map-inline-emoji {
+  display: inline-block;
+  font-size: 2em;
+  line-height: 0.8;
+  vertical-align: -0.18em;
 }
 
 .mind-map-node-editor:focus {

@@ -414,6 +414,48 @@ const mindMapEmojiCategories = [
     items: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💔", "❣️", "💕", "💞", "✅", "❌", "⭕", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "⚫", "⚪", "⬆️", "➡️", "⬇️", "⬅️", "🔄", "🔁", "♾️", "⚠️", "🚫", "❗", "❓"]
   }
 ];
+const mindMapEmojiKeywords = {
+  "😀": "smile happy face",
+  "😎": "cool sunglasses",
+  "🤔": "think thinking question",
+  "😴": "sleep tired rest",
+  "🤯": "mind blown brain",
+  "🥶": "cold freeze frozen",
+  "🥵": "hot heat",
+  "🧘": "meditation yoga calm",
+  "🏃": "run running jogging",
+  "🏋️": "workout gym lift",
+  "🧑‍💻": "computer coding laptop work",
+  "🧠": "brain mind memory",
+  "🫀": "heart organ body",
+  "💀": "dead skull danger",
+  "🔥": "fire energy hot",
+  "⚡": "lightning power energy",
+  "✨": "sparkles magic clean",
+  "🍎": "apple fruit",
+  "🍌": "banana fruit",
+  "🍉": "watermelon fruit",
+  "🥑": "avocado fruit",
+  "🥕": "carrot vegetable",
+  "💧": "water drop",
+  "☕": "coffee drink",
+  "🌱": "seed plant growth",
+  "🌿": "herb leaf nature",
+  "🌙": "moon night",
+  "☀️": "sun day",
+  "🌈": "rainbow color",
+  "❄️": "snow cold",
+  "💻": "laptop computer work",
+  "📚": "books read study",
+  "📝": "note write",
+  "💡": "idea light",
+  "✈️": "flight fly airplane travel",
+  "🚀": "rocket launch",
+  "❤️": "heart love",
+  "✅": "done check yes",
+  "❌": "cross no delete",
+  "⚠️": "warning attention"
+};
 const foundationCardGap = 14;
 const backupDatabaseName = "selfObservationBackup";
 const backupDatabaseStore = "handles";
@@ -3034,6 +3076,25 @@ function placeCaretAtEnd(element) {
   selection.addRange(range);
 }
 
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  }[character]));
+}
+
+function formatMindMapText(value) {
+  const emojiPattern = /(\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?)*)/gu;
+  return escapeHtml(value).replace(emojiPattern, '<span class="mind-map-inline-emoji">$1</span>');
+}
+
+function getMindMapEmojiSearchText(emoji, categoryTitle) {
+  return `${emoji} ${categoryTitle} ${mindMapEmojiKeywords[emoji] || ""}`.toLowerCase();
+}
+
 function insertEmojiIntoMindMapTarget(emoji) {
   const target = getMindMapEmojiTarget();
 
@@ -3059,15 +3120,35 @@ function insertEmojiIntoMindMapTarget(emoji) {
     placeCaretAtEnd(target);
   }
 
-  document.execCommand("insertText", false, emoji);
+  document.execCommand("insertHTML", false, `<span class="mind-map-inline-emoji">${emoji}</span>`);
   target.dispatchEvent(new Event("input", { bubbles: true }));
   setActiveMindMapEmojiTarget(target);
 }
 
-function renderMindMapEmojiPanel() {
+function renderMindMapEmojiPanel(query = "") {
   mindMapEmojiPanel.innerHTML = "";
+  const searchWrap = document.createElement("label");
+  const searchInput = document.createElement("input");
+  const normalizedQuery = query.trim().toLowerCase();
+  let resultCount = 0;
+  searchWrap.className = "mind-map-emoji-search";
+  searchWrap.textContent = "Search";
+  searchInput.type = "search";
+  searchInput.placeholder = "brain, apple, fire...";
+  searchInput.value = query;
+  searchInput.addEventListener("input", () => renderMindMapEmojiPanel(searchInput.value));
+  searchWrap.append(searchInput);
+  mindMapEmojiPanel.append(searchWrap);
 
   mindMapEmojiCategories.forEach((category) => {
+    const filteredItems = normalizedQuery
+      ? category.items.filter((emoji) => getMindMapEmojiSearchText(emoji, category.title).includes(normalizedQuery))
+      : category.items;
+
+    if (filteredItems.length === 0) {
+      return;
+    }
+
     const group = document.createElement("section");
     const title = document.createElement("h4");
     const grid = document.createElement("div");
@@ -3075,7 +3156,7 @@ function renderMindMapEmojiPanel() {
     title.textContent = category.title;
     grid.className = "mind-map-emoji-grid";
 
-    category.items.forEach((emoji) => {
+    filteredItems.forEach((emoji) => {
       const emojiButton = document.createElement("button");
       emojiButton.type = "button";
       emojiButton.className = "mind-map-emoji-item";
@@ -3084,11 +3165,21 @@ function renderMindMapEmojiPanel() {
       emojiButton.addEventListener("mousedown", (event) => event.preventDefault());
       emojiButton.addEventListener("click", () => insertEmojiIntoMindMapTarget(emoji));
       grid.append(emojiButton);
+      resultCount += 1;
     });
 
     group.append(title, grid);
     mindMapEmojiPanel.append(group);
   });
+
+  if (resultCount === 0) {
+    const empty = document.createElement("p");
+    empty.className = "mind-map-emoji-empty";
+    empty.textContent = "No emoji found";
+    mindMapEmojiPanel.append(empty);
+  }
+
+  searchInput.focus();
 }
 
 function toggleMindMapEmojiPanel() {
@@ -3121,8 +3212,8 @@ function renderMindMap() {
     nodeElement.dataset.nodeId = node.id;
     applyMindMapNodeStyle(nodeElement, node);
     editor.className = "mind-map-node-editor";
-    editor.textContent = node.text;
-    editor.contentEditable = "plaintext-only";
+    editor.innerHTML = formatMindMapText(node.text);
+    editor.contentEditable = "true";
     editor.setAttribute("aria-label", "Mind map note");
     editor.setAttribute("role", "textbox");
     editor.setAttribute("spellcheck", "false");

@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.webmanifest?v=170">
   <link rel="apple-touch-icon" href="assets/SelfObservationAppIcon1024.png?v=170">
   <link rel="icon" href="assets/SelfObservationAppIcon1024.png?v=170">
-  <link rel="stylesheet" href="styles.css?v=179">
+  <link rel="stylesheet" href="styles.css?v=180">
 </head>
 <body>
   <main class="page">
@@ -179,7 +179,7 @@
             <textarea id="mindMapInput" rows="2" placeholder="Central idea or next branch..."></textarea>
             <div class="mind-map-actions">
               <button id="mindMapAddRootButton" type="button">Add center</button>
-              <button id="mindMapAddChildButton" type="button">Add child</button>
+              <button id="mindMapAddChildButton" type="button">Add neuron</button>
               <button id="mindMapFlipLinkButton" type="button">Flip link</button>
               <button id="mindMapEmojiButton" type="button">Emoji</button>
               <button id="mindMapDeleteButton" type="button">Delete</button>
@@ -374,11 +374,11 @@
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="script.js?v=179"></script>
+  <script src="script.js?v=180"></script>
   <script>
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("sw.js?v=179").catch(() => {});
+        navigator.serviceWorker.register("sw.js?v=180").catch(() => {});
       });
     }
   </script>

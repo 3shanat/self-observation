@@ -1092,6 +1092,68 @@ select:focus {
   min-width: 170px;
 }
 
+.mind-map-emoji-panel {
+  grid-column: 1 / -1;
+  max-height: 178px;
+  padding: 10px;
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  scrollbar-color: rgba(100, 116, 139, 0.28) transparent;
+  scrollbar-width: thin;
+}
+
+.mind-map-emoji-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mind-map-emoji-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mind-map-emoji-panel::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.24);
+  border-radius: 999px;
+}
+
+.mind-map-emoji-group + .mind-map-emoji-group {
+  margin-top: 10px;
+}
+
+.mind-map-emoji-group h4 {
+  margin: 0 0 6px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mind-map-emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+  gap: 5px;
+}
+
+.mind-map-emoji-item {
+  display: grid;
+  place-items: center;
+  height: 30px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.mind-map-emoji-item:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
 .mind-map-board-wrap {
   min-height: 0;
   overflow: auto;

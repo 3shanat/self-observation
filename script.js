@@ -42,8 +42,10 @@ const mindMapAddRootButton = document.querySelector("#mindMapAddRootButton");
 const mindMapAddChildButton = document.querySelector("#mindMapAddChildButton");
 const mindMapFlipLinkButton = document.querySelector("#mindMapFlipLinkButton");
 const mindMapMoveLinkButton = document.querySelector("#mindMapMoveLinkButton");
+const mindMapEmojiButton = document.querySelector("#mindMapEmojiButton");
 const mindMapDeleteButton = document.querySelector("#mindMapDeleteButton");
 const mindMapColorRow = document.querySelector("#mindMapColorRow");
+const mindMapEmojiPanel = document.querySelector("#mindMapEmojiPanel");
 const mindMapBoard = document.querySelector("#mindMapBoard");
 const mindMapLines = document.querySelector("#mindMapLines");
 const mindMapNodeLayer = document.querySelector("#mindMapNodeLayer");
@@ -345,6 +347,7 @@ let activeFoundationDrag = null;
 let activeFoundation2Drag = null;
 let activeMindMapDrag = null;
 let activeMindMapRelinkNodeId = "";
+let activeMindMapEmojiTarget = null;
 let lastDeletedMindMapBranch = null;
 const observationDrafts = {};
 
@@ -372,6 +375,44 @@ const mindMapLinkLayouts = [
   { parentAnchor: "left", nodeAnchor: "right" },
   { parentAnchor: "bottom", nodeAnchor: "top" },
   { parentAnchor: "top", nodeAnchor: "bottom" }
+];
+const mindMapEmojiCategories = [
+  {
+    title: "Faces",
+    items: ["😀", "😃", "😄", "😁", "😆", "🙂", "🙃", "😉", "😊", "😌", "😍", "🥰", "😘", "😎", "🤓", "🧐", "🤔", "🤨", "😐", "😶", "😏", "😴", "🤯", "🥳", "😤", "😡", "🤬", "😱", "😭", "😂", "🤣", "😇", "🤠", "🥶", "🥵", "🤢", "🤮", "🤕", "😵", "🫠"]
+  },
+  {
+    title: "People",
+    items: ["👶", "🧒", "👦", "👧", "🧑", "👨", "👩", "🧔", "👴", "👵", "🙋", "🙆", "🙅", "🤦", "🤷", "🧘", "🏃", "🚶", "💃", "🕺", "🏋️", "🤸", "🤺", "🧗", "🚴", "🏊", "🧑‍💻", "🧑‍🔧", "🧑‍🎨", "🧑‍🚀", "🧑‍🏫", "🧑‍⚕️", "🧑‍🍳"]
+  },
+  {
+    title: "Hands",
+    items: ["👍", "👎", "👌", "🤌", "🤏", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "👇", "☝️", "✋", "🤚", "🖐️", "🖖", "👋", "🤝", "🙏", "✍️", "👏", "🙌", "🫶", "💪", "🦾"]
+  },
+  {
+    title: "Body",
+    items: ["🧠", "🫀", "🫁", "👁️", "👀", "👂", "👃", "👄", "🦷", "🦴", "💀", "👑", "💎", "🔥", "⚡", "✨", "🌟", "💫", "💥", "💢", "💤", "💦", "💨", "🕳️"]
+  },
+  {
+    title: "Food",
+    items: ["🍎", "🍏", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍒", "🍑", "🥭", "🍍", "🥥", "🥝", "🍅", "🥑", "🥦", "🥬", "🥒", "🌶️", "🫑", "🥕", "🧄", "🧅", "🥔", "🍠", "🥐", "🍞", "🥚", "🥗", "🍯", "🥛", "☕", "🍵", "🧃", "💧"]
+  },
+  {
+    title: "Nature",
+    items: ["🌱", "🌿", "☘️", "🍀", "🍃", "🌵", "🌴", "🌳", "🌲", "🌾", "🌺", "🌸", "🌼", "🌻", "🌹", "🪷", "🍄", "🌍", "🌙", "☀️", "⭐", "🌈", "☁️", "⛈️", "🌊", "❄️", "🔥"]
+  },
+  {
+    title: "Animals",
+    items: ["🐶", "🐱", "🦁", "🐯", "🐺", "🦊", "🐻", "🐼", "🐵", "🦍", "🐸", "🐲", "🦄", "🐝", "🦋", "🐢", "🐍", "🦎", "🐬", "🦈", "🦅", "🦉"]
+  },
+  {
+    title: "Work",
+    items: ["💻", "⌨️", "🖱️", "📱", "📷", "🎧", "🎙️", "📚", "📖", "📝", "📌", "📎", "✂️", "🔒", "🔑", "🔧", "🔨", "⚙️", "🧲", "🧪", "🧬", "🔬", "💡", "🔦", "🕯️", "🧭", "🗺️", "✈️", "🚀"]
+  },
+  {
+    title: "Symbols",
+    items: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💔", "❣️", "💕", "💞", "✅", "❌", "⭕", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "⚫", "⚪", "⬆️", "➡️", "⬇️", "⬅️", "🔄", "🔁", "♾️", "⚠️", "🚫", "❗", "❓"]
+  }
 ];
 const foundationCardGap = 14;
 const backupDatabaseName = "selfObservationBackup";
@@ -2962,6 +3003,102 @@ function renderMindMapColorRow() {
   });
 }
 
+function setActiveMindMapEmojiTarget(target) {
+  activeMindMapEmojiTarget = target;
+}
+
+function getMindMapEmojiTarget() {
+  if (activeMindMapEmojiTarget?.isConnected) {
+    return activeMindMapEmojiTarget;
+  }
+
+  const selectedNode = getMindMapNode(savedData.mindMap.selectedId);
+
+  if (selectedNode) {
+    const editor = mindMapNodeLayer.querySelector(`.mind-map-node[data-node-id="${selectedNode.id}"] .mind-map-node-editor`);
+
+    if (editor) {
+      return editor;
+    }
+  }
+
+  return mindMapInput;
+}
+
+function placeCaretAtEnd(element) {
+  const range = document.createRange();
+  const selection = window.getSelection();
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function insertEmojiIntoMindMapTarget(emoji) {
+  const target = getMindMapEmojiTarget();
+
+  if (!target) {
+    return;
+  }
+
+  target.focus();
+
+  if (target === mindMapInput) {
+    const start = mindMapInput.selectionStart ?? mindMapInput.value.length;
+    const end = mindMapInput.selectionEnd ?? start;
+    mindMapInput.value = `${mindMapInput.value.slice(0, start)}${emoji}${mindMapInput.value.slice(end)}`;
+    const nextPosition = start + emoji.length;
+    mindMapInput.setSelectionRange(nextPosition, nextPosition);
+    setActiveMindMapEmojiTarget(mindMapInput);
+    return;
+  }
+
+  const selection = window.getSelection();
+
+  if (!selection.rangeCount || !target.contains(selection.anchorNode)) {
+    placeCaretAtEnd(target);
+  }
+
+  document.execCommand("insertText", false, emoji);
+  target.dispatchEvent(new Event("input", { bubbles: true }));
+  setActiveMindMapEmojiTarget(target);
+}
+
+function renderMindMapEmojiPanel() {
+  mindMapEmojiPanel.innerHTML = "";
+
+  mindMapEmojiCategories.forEach((category) => {
+    const group = document.createElement("section");
+    const title = document.createElement("h4");
+    const grid = document.createElement("div");
+    group.className = "mind-map-emoji-group";
+    title.textContent = category.title;
+    grid.className = "mind-map-emoji-grid";
+
+    category.items.forEach((emoji) => {
+      const emojiButton = document.createElement("button");
+      emojiButton.type = "button";
+      emojiButton.className = "mind-map-emoji-item";
+      emojiButton.textContent = emoji;
+      emojiButton.title = emoji;
+      emojiButton.addEventListener("mousedown", (event) => event.preventDefault());
+      emojiButton.addEventListener("click", () => insertEmojiIntoMindMapTarget(emoji));
+      grid.append(emojiButton);
+    });
+
+    group.append(title, grid);
+    mindMapEmojiPanel.append(group);
+  });
+}
+
+function toggleMindMapEmojiPanel() {
+  mindMapEmojiPanel.hidden = !mindMapEmojiPanel.hidden;
+
+  if (!mindMapEmojiPanel.hidden) {
+    renderMindMapEmojiPanel();
+  }
+}
+
 function renderMindMap() {
   normalizeMindMapData();
   mindMapNodeLayer.innerHTML = "";
@@ -3002,12 +3139,16 @@ function renderMindMap() {
       }
 
       event.stopPropagation();
+      setActiveMindMapEmojiTarget(editor);
       markMindMapNodeSelected(nodeElement, node.id);
     });
     editor.addEventListener("click", (event) => {
       event.stopPropagation();
     });
-    editor.addEventListener("focus", () => markMindMapNodeSelected(nodeElement, node.id));
+    editor.addEventListener("focus", () => {
+      setActiveMindMapEmojiTarget(editor);
+      markMindMapNodeSelected(nodeElement, node.id);
+    });
     editor.addEventListener("input", () => {
       node.text = editor.innerText.trim();
       node.updated = new Date().toLocaleString();
@@ -4452,6 +4593,28 @@ mindMapMoveLinkButton.addEventListener("click", () => {
   startMindMapRelink(savedData.mindMap.selectedId);
 });
 
+mindMapEmojiButton.addEventListener("mousedown", (event) => {
+  event.preventDefault();
+});
+
+mindMapEmojiButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  toggleMindMapEmojiPanel();
+});
+
+mindMapEmojiPanel.addEventListener("click", (event) => {
+  event.stopPropagation();
+});
+
+document.addEventListener("click", (event) => {
+  if (
+    !mindMapEmojiPanel.hidden
+    && !event.target.closest(".mind-map-toolbar")
+  ) {
+    mindMapEmojiPanel.hidden = true;
+  }
+});
+
 mindMapBoard.addEventListener("click", (event) => {
   if (
     activeMindMapRelinkNodeId
@@ -4459,6 +4622,10 @@ mindMapBoard.addEventListener("click", (event) => {
   ) {
     cancelMindMapRelink();
   }
+});
+
+mindMapInput.addEventListener("focus", () => {
+  setActiveMindMapEmojiTarget(mindMapInput);
 });
 
 mindMapDeleteButton.addEventListener("click", () => {

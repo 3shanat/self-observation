@@ -1162,7 +1162,7 @@ select:focus {
   stroke: transparent;
   stroke-width: 16;
   stroke-linecap: round;
-  cursor: alias;
+  cursor: pointer;
   pointer-events: stroke;
 }
 
@@ -1196,12 +1196,12 @@ select:focus {
 }
 
 .mind-map-node.relink-target {
-  cursor: copy;
+  cursor: pointer;
 }
 
 .mind-map-node.relink-target:hover {
   border-color: #22c55e !important;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2), 0 14px 26px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.34), 0 14px 26px rgba(15, 23, 42, 0.08);
 }
 
 .mind-map-node.dragging,

@@ -1192,6 +1192,16 @@ select:focus {
   border-color: #93c5fd;
 }
 
+.mind-map-icon-item svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: #334155;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .mind-map-emoji-empty {
   margin: 8px 0 0;
   color: #64748b;
@@ -1354,6 +1364,26 @@ select:focus {
   font-size: 2em;
   line-height: 0.8;
   vertical-align: -0.18em;
+}
+
+.mind-map-inline-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2em;
+  height: 2em;
+  margin: 0 0.06em;
+  vertical-align: -0.42em;
+  color: #1f2937;
+}
+
+.mind-map-inline-icon svg {
+  width: 1.75em;
+  height: 1.75em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .mind-map-node-editor:focus {

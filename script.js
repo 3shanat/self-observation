@@ -456,6 +456,73 @@ const mindMapEmojiKeywords = {
   "❌": "cross no delete",
   "⚠️": "warning attention"
 };
+const mindMapIconCategories = [
+  {
+    title: "Anatomy",
+    items: [
+      { id: "brain", label: "Brain", keywords: "brain mind memory thinking", svg: '<svg viewBox="0 0 24 24"><path d="M9 5c-2 0-4 2-4 4 0 1 .3 1.8 1 2.5-1.1.7-1.8 1.8-1.8 3.1 0 2 1.6 3.6 3.6 3.6.8 0 1.5-.2 2.1-.6.6.8 1.5 1.3 2.6 1.3s2-.5 2.6-1.3c.6.4 1.3.6 2.1.6 2 0 3.6-1.6 3.6-3.6 0-1.3-.7-2.4-1.8-3.1.6-.7 1-1.5 1-2.5 0-2-2-4-4-4-1.2 0-2.2.5-3 1.3C11.2 5.5 10.2 5 9 5Z"/><path d="M12 7v12M8 10h4M12 10h4M7 14h5M12 14h5"/></svg>' },
+      { id: "heart", label: "Heart", keywords: "heart pulse love organ blood", svg: '<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-8.8-9.1C1.8 7.2 4.3 4 7.8 4c1.8 0 3.2 1 4.2 2.3C13 5 14.4 4 16.2 4c3.5 0 6 3.2 4.6 6.9C19 15.6 12 20 12 20Z"/><path d="M5 12h4l1.2-3 2.2 6 1.4-3H19"/></svg>' },
+      { id: "lungs", label: "Lungs", keywords: "lungs breath oxygen air", svg: '<svg viewBox="0 0 24 24"><path d="M12 4v16"/><path d="M12 9c-3-3-6-2-7 2l-1 5c-.3 1.5.8 3 2.3 3H9c1.7 0 3-1.3 3-3V9Z"/><path d="M12 9c3-3 6-2 7 2l1 5c.3 1.5-.8 3-2.3 3H15c-1.7 0-3-1.3-3-3V9Z"/></svg>' },
+      { id: "eye", label: "Eye", keywords: "eye vision see focus", svg: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>' },
+      { id: "spine", label: "Spine", keywords: "spine back posture body", svg: '<svg viewBox="0 0 24 24"><path d="M13 3c-3 2-3 4 0 6-3 2-3 4 0 6-3 2-3 4 0 6"/><path d="M9 5h5M9 10h5M9 15h5M9 20h5"/></svg>' },
+      { id: "bone", label: "Bone", keywords: "bone skeleton body", svg: '<svg viewBox="0 0 24 24"><path d="M7 8a2.5 2.5 0 1 1 3-3l4 4 4 4a2.5 2.5 0 1 1-3 3l-4-4-4-4Z"/><path d="M6 17a2.5 2.5 0 1 0 3 3l4-4M18 7a2.5 2.5 0 1 0-3-3l-4 4"/></svg>' },
+      { id: "muscle", label: "Muscle", keywords: "muscle power strong body", svg: '<svg viewBox="0 0 24 24"><path d="M6 14c2-6 5-9 8-9 1.8 0 3 1.2 3 3 0 1.4-.8 2.5-2 3 3 .8 5 2.5 5 5 0 2.8-2.2 5-5 5H8c-2.2 0-4-1.8-4-4 0-1.3.7-2.5 2-3Z"/><path d="M9 14h5"/></svg>' },
+      { id: "stomach", label: "Stomach", keywords: "stomach gut food digestion microbiota", svg: '<svg viewBox="0 0 24 24"><path d="M10 3v5c0 2 2 2 3 3 2 1.5 4 2.5 4 5a5 5 0 0 1-10 0c0-2 1-3.2 3-4.5"/><path d="M13 11c-2 1-3 2.5-3 5 0 1.6 1.2 3 3 3"/></svg>' }
+    ]
+  },
+  {
+    title: "Home",
+    items: [
+      { id: "home", label: "Home", keywords: "home house building", svg: '<svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>' },
+      { id: "door", label: "Door", keywords: "door entrance exit open", svg: '<svg viewBox="0 0 24 24"><path d="M7 3h10v18H7Z"/><path d="M11 12h1"/></svg>' },
+      { id: "window", label: "Window", keywords: "window view room", svg: '<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4Z"/><path d="M12 5v14M4 12h16"/></svg>' },
+      { id: "stairs", label: "Stairs", keywords: "stairs steps level climb progress", svg: '<svg viewBox="0 0 24 24"><path d="M4 19h5v-4h5v-4h6"/><path d="M4 19h16"/></svg>' },
+      { id: "bed", label: "Bed", keywords: "bed sleep rest", svg: '<svg viewBox="0 0 24 24"><path d="M4 11V6"/><path d="M4 14h16v5"/><path d="M4 19v-8h6c2 0 3 1 3 3"/><path d="M13 14h7"/></svg>' },
+      { id: "sofa", label: "Sofa", keywords: "sofa couch relax comfort", svg: '<svg viewBox="0 0 24 24"><path d="M6 12V9c0-1.7 1.3-3 3-3h6c1.7 0 3 1.3 3 3v3"/><path d="M4 12h16v6H4Z"/><path d="M6 18v2M18 18v2"/></svg>' },
+      { id: "brick", label: "Brick", keywords: "brick wall build foundation", svg: '<svg viewBox="0 0 24 24"><path d="M3 7h18v10H3Z"/><path d="M3 12h18M8 7v5M16 7v5M12 12v5"/></svg>' },
+      { id: "key", label: "Key", keywords: "key unlock access", svg: '<svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M17 12v3M20 12v2"/></svg>' }
+    ]
+  },
+  {
+    title: "Path",
+    items: [
+      { id: "path", label: "Path", keywords: "path road way journey", svg: '<svg viewBox="0 0 24 24"><path d="M8 21c3-5 3-13 8-18"/><path d="M4 21c3-6 3-12 6-18"/><path d="M12 18h4M11 13h3M10 8h3"/></svg>' },
+      { id: "ladder", label: "Ladder", keywords: "ladder climb steps", svg: '<svg viewBox="0 0 24 24"><path d="M8 21 16 3M16 21 8 3"/><path d="M9.5 7h5M8 11h8M6.5 15h11"/></svg>' },
+      { id: "mountain", label: "Mountain", keywords: "mountain goal challenge", svg: '<svg viewBox="0 0 24 24"><path d="m3 20 7-13 4 7 2-3 5 9Z"/><path d="m10 7 1.8 3H8.5"/></svg>' },
+      { id: "flag", label: "Flag", keywords: "flag goal target finish", svg: '<svg viewBox="0 0 24 24"><path d="M6 21V4"/><path d="M6 4h12l-2 4 2 4H6"/></svg>' },
+      { id: "compass", label: "Compass", keywords: "compass direction navigation", svg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="m15 9-2 5-4 1 2-5Z"/></svg>' },
+      { id: "map", label: "Map", keywords: "map plan route", svg: '<svg viewBox="0 0 24 24"><path d="M4 6 9 4l6 2 5-2v14l-5 2-6-2-5 2Z"/><path d="M9 4v14M15 6v14"/></svg>' },
+      { id: "bridge", label: "Bridge", keywords: "bridge connect crossing", svg: '<svg viewBox="0 0 24 24"><path d="M3 17h18"/><path d="M5 17c1-5 4-8 7-8s6 3 7 8"/><path d="M7 17v-4M12 17V9M17 17v-4"/></svg>' },
+      { id: "cycle", label: "Cycle", keywords: "cycle loop repeat habit", svg: '<svg viewBox="0 0 24 24"><path d="M17 4h4v4"/><path d="M20 7a8 8 0 0 0-14-1"/><path d="M7 20H3v-4"/><path d="M4 17a8 8 0 0 0 14 1"/></svg>' }
+    ]
+  },
+  {
+    title: "Tools",
+    items: [
+      { id: "hammer", label: "Hammer", keywords: "hammer build work", svg: '<svg viewBox="0 0 24 24"><path d="M14 5 5 14l5 5 9-9"/><path d="m14 5 2-2 5 5-2 2"/></svg>' },
+      { id: "wrench", label: "Wrench", keywords: "wrench repair fix", svg: '<svg viewBox="0 0 24 24"><path d="M15 6a5 5 0 0 0 6 6L12 21l-4-4 9-9a5 5 0 0 0-2-2Z"/></svg>' },
+      { id: "gear", label: "Gear", keywords: "gear system process", svg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M19.1 4.9l-2.8 2.8M7.7 16.3l-2.8 2.8"/></svg>' },
+      { id: "scissors", label: "Scissors", keywords: "scissors cut remove", svg: '<svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5 20 20M8.5 15.5 20 4"/></svg>' },
+      { id: "magnet", label: "Magnet", keywords: "magnet attract pull", svg: '<svg viewBox="0 0 24 24"><path d="M6 4h4v8a2 2 0 0 0 4 0V4h4v8a6 6 0 0 1-12 0Z"/><path d="M6 8h4M14 8h4"/></svg>' },
+      { id: "beaker", label: "Beaker", keywords: "beaker science test experiment", svg: '<svg viewBox="0 0 24 24"><path d="M9 3h6"/><path d="M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6A2 2 0 0 0 19 18l-5-9V3"/><path d="M7 16h10"/></svg>' },
+      { id: "book-open", label: "Book", keywords: "book reading study", svg: '<svg viewBox="0 0 24 24"><path d="M4 5h6c1.1 0 2 .9 2 2v13c0-1.1-.9-2-2-2H4Z"/><path d="M20 5h-6c-1.1 0-2 .9-2 2v13c0-1.1.9-2 2-2h6Z"/></svg>' },
+      { id: "laptop", label: "Laptop", keywords: "laptop computer work code", svg: '<svg viewBox="0 0 24 24"><path d="M5 5h14v10H5Z"/><path d="M3 19h18l-2-4H5Z"/></svg>' }
+    ]
+  },
+  {
+    title: "Mind",
+    items: [
+      { id: "lightbulb", label: "Idea", keywords: "idea light thought insight", svg: '<svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M8 14a6 6 0 1 1 8 0c-.8.7-1 1.4-1 2H9c0-.6-.2-1.3-1-2Z"/></svg>' },
+      { id: "spark", label: "Spark", keywords: "spark energy magic", svg: '<svg viewBox="0 0 24 24"><path d="M12 2 9 9l-7 3 7 3 3 7 3-7 7-3-7-3Z"/></svg>' },
+      { id: "target", label: "Target", keywords: "target goal focus", svg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>' },
+      { id: "question", label: "Question", keywords: "question unknown why", svg: '<svg viewBox="0 0 24 24"><path d="M9.5 8a3 3 0 1 1 4.5 2.6c-1.2.7-2 1.4-2 3"/><path d="M12 18h.1"/></svg>' },
+      { id: "warning", label: "Warning", keywords: "warning danger attention", svg: '<svg viewBox="0 0 24 24"><path d="m12 3 10 18H2Z"/><path d="M12 9v5M12 18h.1"/></svg>' },
+      { id: "lock", label: "Lock", keywords: "lock protect closed", svg: '<svg viewBox="0 0 24 24"><path d="M6 10h12v10H6Z"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/></svg>' },
+      { id: "unlock", label: "Unlock", keywords: "unlock open release", svg: '<svg viewBox="0 0 24 24"><path d="M6 10h12v10H6Z"/><path d="M8 10V8a4 4 0 0 1 7.5-2"/></svg>' },
+      { id: "infinity", label: "Infinity", keywords: "infinity forever loop", svg: '<svg viewBox="0 0 24 24"><path d="M7 8c-3 0-5 2-5 4s2 4 5 4c2.5 0 4-4 5-4s2.5 4 5 4c3 0 5-2 5-4s-2-4-5-4c-2.5 0-4 4-5 4S9.5 8 7 8Z"/></svg>' }
+    ]
+  }
+];
 const foundationCardGap = 14;
 const backupDatabaseName = "selfObservationBackup";
 const backupDatabaseStore = "handles";
@@ -3086,13 +3153,50 @@ function escapeHtml(value) {
   }[character]));
 }
 
+function getMindMapIcon(id) {
+  return mindMapIconCategories
+    .flatMap((category) => category.items)
+    .find((icon) => icon.id === id) || null;
+}
+
+function getMindMapIconMarkup(icon) {
+  return `<span class="mind-map-inline-icon" data-mind-icon="${escapeHtml(icon.id)}" contenteditable="false" title="${escapeHtml(icon.label)}">${icon.svg}</span>`;
+}
+
 function formatMindMapText(value) {
   const emojiPattern = /(\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?)*)/gu;
-  return escapeHtml(value).replace(emojiPattern, '<span class="mind-map-inline-emoji">$1</span>');
+  return escapeHtml(value)
+    .replace(/\[\[icon:([a-z0-9-]+)\]\]/g, (match, iconId) => {
+      const icon = getMindMapIcon(iconId);
+      return icon ? getMindMapIconMarkup(icon) : match;
+    })
+    .replace(emojiPattern, '<span class="mind-map-inline-emoji">$1</span>');
 }
 
 function getMindMapEmojiSearchText(emoji, categoryTitle) {
   return `${emoji} ${categoryTitle} ${mindMapEmojiKeywords[emoji] || ""}`.toLowerCase();
+}
+
+function getMindMapIconSearchText(icon, categoryTitle) {
+  return `${icon.id} ${icon.label} ${categoryTitle} ${icon.keywords}`.toLowerCase();
+}
+
+function serializeMindMapEditor(element) {
+  return Array.from(element.childNodes).map((node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.nodeValue || "";
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return "";
+    }
+
+    if (node.dataset?.mindIcon) {
+      return `[[icon:${node.dataset.mindIcon}]]`;
+    }
+
+    return serializeMindMapEditor(node);
+  }).join("").replace(/\u00a0/g, " ");
 }
 
 function insertEmojiIntoMindMapTarget(emoji) {
@@ -3121,6 +3225,37 @@ function insertEmojiIntoMindMapTarget(emoji) {
   }
 
   document.execCommand("insertHTML", false, `<span class="mind-map-inline-emoji">${emoji}</span>`);
+  target.dispatchEvent(new Event("input", { bubbles: true }));
+  setActiveMindMapEmojiTarget(target);
+}
+
+function insertIconIntoMindMapTarget(icon) {
+  const target = getMindMapEmojiTarget();
+
+  if (!target) {
+    return;
+  }
+
+  target.focus();
+
+  if (target === mindMapInput) {
+    const token = `[[icon:${icon.id}]]`;
+    const start = mindMapInput.selectionStart ?? mindMapInput.value.length;
+    const end = mindMapInput.selectionEnd ?? start;
+    mindMapInput.value = `${mindMapInput.value.slice(0, start)}${token}${mindMapInput.value.slice(end)}`;
+    const nextPosition = start + token.length;
+    mindMapInput.setSelectionRange(nextPosition, nextPosition);
+    setActiveMindMapEmojiTarget(mindMapInput);
+    return;
+  }
+
+  const selection = window.getSelection();
+
+  if (!selection.rangeCount || !target.contains(selection.anchorNode)) {
+    placeCaretAtEnd(target);
+  }
+
+  document.execCommand("insertHTML", false, getMindMapIconMarkup(icon));
   target.dispatchEvent(new Event("input", { bubbles: true }));
   setActiveMindMapEmojiTarget(target);
 }
@@ -3165,6 +3300,39 @@ function renderMindMapEmojiPanel(query = "") {
       emojiButton.addEventListener("mousedown", (event) => event.preventDefault());
       emojiButton.addEventListener("click", () => insertEmojiIntoMindMapTarget(emoji));
       grid.append(emojiButton);
+      resultCount += 1;
+    });
+
+    group.append(title, grid);
+    mindMapEmojiPanel.append(group);
+  });
+
+  mindMapIconCategories.forEach((category) => {
+    const filteredItems = normalizedQuery
+      ? category.items.filter((icon) => getMindMapIconSearchText(icon, category.title).includes(normalizedQuery))
+      : category.items;
+
+    if (filteredItems.length === 0) {
+      return;
+    }
+
+    const group = document.createElement("section");
+    const title = document.createElement("h4");
+    const grid = document.createElement("div");
+    group.className = "mind-map-emoji-group";
+    title.textContent = category.title;
+    grid.className = "mind-map-emoji-grid";
+
+    filteredItems.forEach((icon) => {
+      const iconButton = document.createElement("button");
+      iconButton.type = "button";
+      iconButton.className = "mind-map-emoji-item mind-map-icon-item";
+      iconButton.innerHTML = icon.svg;
+      iconButton.title = icon.label;
+      iconButton.setAttribute("aria-label", icon.label);
+      iconButton.addEventListener("mousedown", (event) => event.preventDefault());
+      iconButton.addEventListener("click", () => insertIconIntoMindMapTarget(icon));
+      grid.append(iconButton);
       resultCount += 1;
     });
 
@@ -3241,7 +3409,7 @@ function renderMindMap() {
       markMindMapNodeSelected(nodeElement, node.id);
     });
     editor.addEventListener("input", () => {
-      node.text = editor.innerText.trim();
+      node.text = serializeMindMapEditor(editor).trim();
       node.updated = new Date().toLocaleString();
       saveData();
       drawMindMapLines();

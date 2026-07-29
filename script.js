@@ -40,7 +40,6 @@ const renoteEditor = document.querySelector("#renoteEditor");
 const mindMapInput = document.querySelector("#mindMapInput");
 const mindMapAddRootButton = document.querySelector("#mindMapAddRootButton");
 const mindMapAddChildButton = document.querySelector("#mindMapAddChildButton");
-const mindMapUpdateButton = document.querySelector("#mindMapUpdateButton");
 const mindMapFlipLinkButton = document.querySelector("#mindMapFlipLinkButton");
 const mindMapDeleteButton = document.querySelector("#mindMapDeleteButton");
 const mindMapColorRow = document.querySelector("#mindMapColorRow");
@@ -2623,7 +2622,6 @@ function markMindMapNodeSelected(nodeElement, nodeId) {
   saveData();
   renderMindMapColorRow();
   mindMapAddChildButton.disabled = false;
-  mindMapUpdateButton.disabled = false;
   mindMapFlipLinkButton.disabled = !getMindMapNode(nodeId)?.parentId;
   mindMapDeleteButton.disabled = false;
 }
@@ -2932,7 +2930,6 @@ function renderMindMap() {
 
   const selectedNode = getMindMapNode(savedData.mindMap.selectedId);
   mindMapAddChildButton.disabled = !selectedNode;
-  mindMapUpdateButton.disabled = !selectedNode;
   mindMapFlipLinkButton.disabled = !selectedNode || !selectedNode.parentId;
   mindMapDeleteButton.disabled = !selectedNode;
 
@@ -2991,28 +2988,6 @@ function cycleSelectedMindMapLink() {
   selectedNode.updated = new Date().toLocaleString();
   saveData();
   drawMindMapLines();
-}
-
-function focusSelectedMindMapNode() {
-  const selectedNode = getMindMapNode(savedData.mindMap.selectedId);
-
-  if (!selectedNode) {
-    return;
-  }
-
-  const editor = mindMapNodeLayer.querySelector(`.mind-map-node[data-node-id="${selectedNode.id}"] .mind-map-node-editor`);
-
-  if (!editor) {
-    return;
-  }
-
-  editor.focus();
-  const range = document.createRange();
-  const selection = window.getSelection();
-  range.selectNodeContents(editor);
-  range.collapse(false);
-  selection.removeAllRanges();
-  selection.addRange(range);
 }
 
 async function deleteSelectedMindMapNode() {
@@ -4356,10 +4331,6 @@ mindMapAddRootButton.addEventListener("click", () => {
 
 mindMapAddChildButton.addEventListener("click", () => {
   addMindMapNode(savedData.mindMap.selectedId);
-});
-
-mindMapUpdateButton.addEventListener("click", () => {
-  focusSelectedMindMapNode();
 });
 
 mindMapFlipLinkButton.addEventListener("click", () => {

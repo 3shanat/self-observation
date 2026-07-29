@@ -1386,6 +1386,24 @@ select:focus {
   stroke-linejoin: round;
 }
 
+.mind-map-inline-image {
+  display: inline-block;
+  width: var(--mind-image-size, 52px);
+  max-width: min(10vw, 128px);
+  height: auto;
+  margin: 0 0.08em;
+  object-fit: contain;
+  vertical-align: -0.42em;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.mind-map-inline-image.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.24);
+}
+
 .mind-map-node-editor:focus {
   border: 0;
   outline: none;

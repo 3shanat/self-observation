@@ -42,9 +42,13 @@ const mindMapAddRootButton = document.querySelector("#mindMapAddRootButton");
 const mindMapAddChildButton = document.querySelector("#mindMapAddChildButton");
 const mindMapFlipLinkButton = document.querySelector("#mindMapFlipLinkButton");
 const mindMapEmojiButton = document.querySelector("#mindMapEmojiButton");
+const mindMapImageButton = document.querySelector("#mindMapImageButton");
+const mindMapImageSmallerButton = document.querySelector("#mindMapImageSmallerButton");
+const mindMapImageLargerButton = document.querySelector("#mindMapImageLargerButton");
 const mindMapDeleteButton = document.querySelector("#mindMapDeleteButton");
 const mindMapColorRow = document.querySelector("#mindMapColorRow");
 const mindMapEmojiPanel = document.querySelector("#mindMapEmojiPanel");
+const mindMapImageInput = document.querySelector("#mindMapImageInput");
 const mindMapBoard = document.querySelector("#mindMapBoard");
 const mindMapLines = document.querySelector("#mindMapLines");
 const mindMapNodeLayer = document.querySelector("#mindMapNodeLayer");
@@ -347,6 +351,7 @@ let activeFoundation2Drag = null;
 let activeMindMapDrag = null;
 let activeMindMapRelinkNodeId = "";
 let activeMindMapEmojiTarget = null;
+let activeMindMapImageElement = null;
 let lastDeletedMindMapBranch = null;
 const observationDrafts = {};
 
@@ -375,6 +380,7 @@ const mindMapLinkLayouts = [
   { parentAnchor: "bottom", nodeAnchor: "top" },
   { parentAnchor: "top", nodeAnchor: "bottom" }
 ];
+const mindMapImageSizes = [24, 36, 52, 72, 96, 128];
 const mindMapEmojiCategories = [
   {
     title: "Faces",
@@ -3161,9 +3167,18 @@ function getMindMapIconMarkup(icon) {
   return `<span class="mind-map-inline-icon" data-mind-icon="${escapeHtml(icon.id)}" contenteditable="false" title="${escapeHtml(icon.label)}">${icon.svg}</span>`;
 }
 
+function getMindMapImageMarkup(src, size = 2) {
+  const normalizedSize = Math.max(0, Math.min(Number(size) || 2, mindMapImageSizes.length - 1));
+  const pixelSize = mindMapImageSizes[normalizedSize];
+  return `<img class="mind-map-inline-image" data-mind-image="${escapeHtml(src)}" data-mind-image-size="${normalizedSize}" src="${escapeHtml(src)}" alt="" contenteditable="false" style="--mind-image-size: ${pixelSize}px;">`;
+}
+
 function formatMindMapText(value) {
   const emojiPattern = /(\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?)*)/gu;
   return escapeHtml(value)
+    .replace(/\[\[image:(\d+):(data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=]+)\]\]/gi, (match, size, src) => (
+      getMindMapImageMarkup(src, Number(size))
+    ))
     .replace(/\[\[icon:([a-z0-9-]+)\]\]/g, (match, iconId) => {
       const icon = getMindMapIcon(iconId);
       return icon ? getMindMapIconMarkup(icon) : match;
@@ -3193,8 +3208,48 @@ function serializeMindMapEditor(element) {
       return `[[icon:${node.dataset.mindIcon}]]`;
     }
 
+    if (node.dataset?.mindImage) {
+      return `[[image:${node.dataset.mindImageSize || 2}:${node.dataset.mindImage}]]`;
+    }
+
     return serializeMindMapEditor(node);
   }).join("").replace(/\u00a0/g, " ");
+}
+
+function updateMindMapImageButtons() {
+  const hasImage = Boolean(activeMindMapImageElement?.isConnected);
+  mindMapImageSmallerButton.disabled = !hasImage;
+  mindMapImageLargerButton.disabled = !hasImage;
+}
+
+function selectMindMapImage(imageElement) {
+  mindMapNodeLayer.querySelectorAll(".mind-map-inline-image.selected").forEach((selectedImage) => {
+    selectedImage.classList.remove("selected");
+  });
+  activeMindMapImageElement = imageElement;
+
+  if (activeMindMapImageElement?.isConnected) {
+    activeMindMapImageElement.classList.add("selected");
+  }
+
+  updateMindMapImageButtons();
+}
+
+function resizeSelectedMindMapImage(direction) {
+  if (!activeMindMapImageElement?.isConnected) {
+    updateMindMapImageButtons();
+    return;
+  }
+
+  const currentSize = Number(activeMindMapImageElement.dataset.mindImageSize) || 2;
+  const nextSize = Math.max(0, Math.min(currentSize + direction, mindMapImageSizes.length - 1));
+  activeMindMapImageElement.dataset.mindImageSize = String(nextSize);
+  activeMindMapImageElement.style.setProperty("--mind-image-size", `${mindMapImageSizes[nextSize]}px`);
+  const editor = activeMindMapImageElement.closest(".mind-map-node-editor");
+
+  if (editor) {
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  }
 }
 
 function insertEmojiIntoMindMapTarget(emoji) {
@@ -3256,6 +3311,88 @@ function insertIconIntoMindMapTarget(icon) {
   document.execCommand("insertHTML", false, getMindMapIconMarkup(icon));
   target.dispatchEvent(new Event("input", { bubbles: true }));
   setActiveMindMapEmojiTarget(target);
+}
+
+function readMindMapImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result || "")));
+    reader.addEventListener("error", () => reject(reader.error || new Error("Could not read image")));
+    reader.readAsDataURL(file);
+  });
+}
+
+function compressMindMapImage(dataUrl, fileType) {
+  return new Promise((resolve) => {
+    if (fileType === "image/gif") {
+      resolve(dataUrl);
+      return;
+    }
+
+    const image = new Image();
+    image.addEventListener("load", () => {
+      const maxSide = 900;
+      const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        resolve(dataUrl);
+        return;
+      }
+
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const outputType = fileType === "image/png" ? "image/png" : "image/jpeg";
+      resolve(canvas.toDataURL(outputType, 0.84));
+    });
+    image.addEventListener("error", () => resolve(dataUrl));
+    image.src = dataUrl;
+  });
+}
+
+function insertMindMapImage(src) {
+  const target = getMindMapEmojiTarget();
+
+  if (!target) {
+    return;
+  }
+
+  target.focus();
+
+  if (target === mindMapInput) {
+    const token = `[[image:2:${src}]]`;
+    const start = mindMapInput.selectionStart ?? mindMapInput.value.length;
+    const end = mindMapInput.selectionEnd ?? start;
+    mindMapInput.value = `${mindMapInput.value.slice(0, start)}${token}${mindMapInput.value.slice(end)}`;
+    const nextPosition = start + token.length;
+    mindMapInput.setSelectionRange(nextPosition, nextPosition);
+    setActiveMindMapEmojiTarget(mindMapInput);
+    return;
+  }
+
+  const selection = window.getSelection();
+
+  if (!selection.rangeCount || !target.contains(selection.anchorNode)) {
+    placeCaretAtEnd(target);
+  }
+
+  document.execCommand("insertHTML", false, getMindMapImageMarkup(src, 2));
+  target.dispatchEvent(new Event("input", { bubbles: true }));
+  const insertedImages = target.querySelectorAll(".mind-map-inline-image");
+  selectMindMapImage(insertedImages[insertedImages.length - 1] || null);
+  setActiveMindMapEmojiTarget(target);
+}
+
+async function handleMindMapImageFile(file) {
+  if (!file || !file.type.startsWith("image/")) {
+    return;
+  }
+
+  const dataUrl = await readMindMapImageFile(file);
+  const compressedDataUrl = await compressMindMapImage(dataUrl, file.type);
+  insertMindMapImage(compressedDataUrl);
 }
 
 function renderMindMapEmojiPanel(query = "") {
@@ -3400,6 +3537,16 @@ function renderMindMap() {
       markMindMapNodeSelected(nodeElement, node.id);
     });
     editor.addEventListener("click", (event) => {
+      const imageElement = event.target.closest(".mind-map-inline-image");
+
+      if (imageElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        selectMindMapImage(imageElement);
+        setActiveMindMapEmojiTarget(editor);
+        return;
+      }
+
       event.stopPropagation();
     });
     editor.addEventListener("focus", () => {
@@ -3435,6 +3582,7 @@ function renderMindMap() {
   mindMapAddChildButton.disabled = !selectedNode;
   mindMapFlipLinkButton.disabled = !selectedNode || !selectedNode.parentId;
   mindMapDeleteButton.disabled = !selectedNode;
+  updateMindMapImageButtons();
 
   if (!selectedNode && savedData.mindMap.nodes.length === 0 && mindMapInput.value.trim() === "") {
     mindMapInput.placeholder = "Write the central idea...";
@@ -4852,6 +5000,24 @@ mindMapEmojiButton.addEventListener("mousedown", (event) => {
 mindMapEmojiButton.addEventListener("click", (event) => {
   event.stopPropagation();
   toggleMindMapEmojiPanel();
+});
+
+mindMapImageButton.addEventListener("click", () => {
+  mindMapImageInput.click();
+});
+
+mindMapImageInput.addEventListener("change", async () => {
+  const file = mindMapImageInput.files?.[0] || null;
+  mindMapImageInput.value = "";
+  await handleMindMapImageFile(file);
+});
+
+mindMapImageSmallerButton.addEventListener("click", () => {
+  resizeSelectedMindMapImage(-1);
+});
+
+mindMapImageLargerButton.addEventListener("click", () => {
+  resizeSelectedMindMapImage(1);
 });
 
 mindMapEmojiPanel.addEventListener("click", (event) => {

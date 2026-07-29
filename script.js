@@ -41,7 +41,6 @@ const mindMapInput = document.querySelector("#mindMapInput");
 const mindMapAddRootButton = document.querySelector("#mindMapAddRootButton");
 const mindMapAddChildButton = document.querySelector("#mindMapAddChildButton");
 const mindMapFlipLinkButton = document.querySelector("#mindMapFlipLinkButton");
-const mindMapMoveLinkButton = document.querySelector("#mindMapMoveLinkButton");
 const mindMapEmojiButton = document.querySelector("#mindMapEmojiButton");
 const mindMapDeleteButton = document.querySelector("#mindMapDeleteButton");
 const mindMapColorRow = document.querySelector("#mindMapColorRow");
@@ -2775,7 +2774,6 @@ function markMindMapNodeSelected(nodeElement, nodeId) {
   renderMindMapColorRow();
   mindMapAddChildButton.disabled = false;
   mindMapFlipLinkButton.disabled = !getMindMapNode(nodeId)?.parentId;
-  mindMapMoveLinkButton.disabled = !getMindMapNode(nodeId)?.parentId;
   mindMapDeleteButton.disabled = false;
 }
 
@@ -3436,7 +3434,6 @@ function renderMindMap() {
   const selectedNode = getMindMapNode(savedData.mindMap.selectedId);
   mindMapAddChildButton.disabled = !selectedNode;
   mindMapFlipLinkButton.disabled = !selectedNode || !selectedNode.parentId;
-  mindMapMoveLinkButton.disabled = !selectedNode || !selectedNode.parentId;
   mindMapDeleteButton.disabled = !selectedNode;
 
   if (!selectedNode && savedData.mindMap.nodes.length === 0 && mindMapInput.value.trim() === "") {
@@ -4846,10 +4843,6 @@ mindMapAddChildButton.addEventListener("click", () => {
 
 mindMapFlipLinkButton.addEventListener("click", () => {
   cycleSelectedMindMapLink();
-});
-
-mindMapMoveLinkButton.addEventListener("click", () => {
-  startMindMapRelink(savedData.mindMap.selectedId);
 });
 
 mindMapEmojiButton.addEventListener("mousedown", (event) => {
